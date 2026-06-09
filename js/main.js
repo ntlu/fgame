@@ -1,14 +1,24 @@
 import { GameState } from './GameState.js';
 import { GameManager } from './GameManager.js';
+import { UIState } from './UIState.js';
+import { Renderer } from './Renderer.js';
+import { TurnEngine } from './TurnEngine.js';
 
 function init() {
     const gameState = new GameState();
     const gameManager = new GameManager(gameState);
+    const uiState = new UIState();
+    const turnEngine = new TurnEngine(gameState);
     
+    // Khởi tạo và chia bài
     gameManager.startNewRound();
 
+    // Khởi tạo Renderer và gọi render
+    const renderer = new Renderer(gameState, uiState, turnEngine);
+    renderer.render();
+
+    // Tiếp tục in log cho các console tests
     console.log("===== GAME STATE =====");
-    console.log("");
     console.log(`Round: ${gameState.round}`);
     console.log("");
     console.log(`Dealer:\nPlayer ${gameState.players[gameState.dealerIndex].id}`);
