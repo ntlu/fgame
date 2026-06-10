@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cauca Project</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="connection-panel">
+        <div>Máy chủ: <span id="socket-status" class="status-disconnected">Mất kết nối</span></div>
+        <div>ID kết nối: <span id="socket-id">---</span></div>
+        <div>Số người kết nối: <span id="connected-clients">---</span></div>
+        <div>Đồng bộ cuối: <span id="last-sync">---</span></div>
+        <div>Bạn là: <span id="local-player-seat">Khán giả</span></div>
+        <div id="join-section" style="display: flex; flex-direction: column; gap: 5px; margin-top: 5px;">
+            <input type="text" id="player-name" placeholder="Nhập tên của bạn..." style="padding: 5px; border-radius: 4px; border: 1px solid #4a5568; background: #1a202c; color: white; font-size: 12px; outline: none;">
+            <button id="join-game-btn" style="padding: 5px; background: #2b6cb0; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">Tham gia</button>
+        </div>
+        <button id="reset-game-btn" style="margin-top: 5px; padding: 5px; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">Đặt lại trò chơi</button>
+    </div>
+    <div class="container">
+        <h1 class="greeting">Đang tải game...</h1>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="./js/main.js"></script>
+    <script type="module" src="./js/tests.js"></script>
+    <script type="module" src="./js/tests-turn.js"></script>
+</body>
+</html>

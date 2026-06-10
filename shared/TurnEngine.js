@@ -60,24 +60,24 @@ export class TurnEngine {
         return this.gameState.deck.pop();
     }
 
-    processDraw(playerIndex, selectedTableCardIndex = null) {
+    processDraw(playerIndex) {
         const player = this.gameState.players[playerIndex];
         const drawnCard = this.drawCard();
 
         if (!drawnCard) return null;
 
-        if (selectedTableCardIndex !== null && selectedTableCardIndex >= 0 && selectedTableCardIndex < this.gameState.tableCards.length) {
-            const tableCard = this.gameState.tableCards[selectedTableCardIndex];
-            
-            // Xác nhận hợp lệ mới được ăn
-            if (this.validateCaptureSelection(drawnCard, tableCard) && this.captureCard(drawnCard, tableCard)) {
-                this.gameState.tableCards.splice(selectedTableCardIndex, 1);
-                player.capturedCards.push(drawnCard, tableCard);
-                return { drawnCard, tableCard, captured: true };
-            }
+        const possibleCards = RuleEngine.findCapturableCards(drawnCard, this.gameState.tableCards);
+        
+        if (possibleCards.length > 0) {
+            // Auto capture first possible card
+            const tableCard = possibleCards[0];
+            const tableCardIndex = this.gameState.tableCards.findIndex(c => c.id === tableCard.id);
+            this.gameState.tableCards.splice(tableCardIndex, 1);
+            player.capturedCards.push(drawnCard, tableCard);
+            return { drawnCard, tableCard, captured: true };
         }
 
-        // Không ăn được hoặc chọn sai => đưa xuống bàn
+        // Không ăn được => đưa xuống bàn
         this.gameState.tableCards.push(drawnCard);
         return { drawnCard, tableCard: null, captured: false };
     }

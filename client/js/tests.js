@@ -1,4 +1,4 @@
-import { RuleEngine } from './RuleEngine.js';
+import { RuleEngine } from '/shared/RuleEngine.js';
 
 function runTest(name, expected, actual) {
     let result = "FAIL";

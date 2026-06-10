@@ -1,4 +1,4 @@
-import { RuleEngine } from './RuleEngine.js';
+import { RuleEngine } from '/shared/RuleEngine.js';
 
 export class AIEngine {
     static simulateSingleTurn(turnEngine) {

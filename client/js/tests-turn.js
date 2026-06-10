@@ -1,6 +1,6 @@
-import { GameState } from './GameState.js';
-import { GameManager } from './GameManager.js';
-import { TurnEngine } from './TurnEngine.js';
+import { GameState } from '/shared/GameState.js';
+import { GameManager } from '/shared/GameManager.js';
+import { TurnEngine } from '/shared/TurnEngine.js';
 import { AIEngine } from './AIEngine.js';
 
 function runTest(name, expected, actual) {
@@ -66,17 +66,17 @@ function testTurnEngine() {
     turnEngine.nextTurn();
     runTest("nextTurn() P4 -> P1", 0, gameState.currentPlayerIndex);
 
-    // test processDraw
+    // test processDraw (Auto Capture)
     gameState.deck = [{id: 'AD', rank: 'A', suit: 'D'}];
-    gameState.tableCards = [{id: '9H', rank: '9', suit: 'H'}];
-    // Giả sử có chức năng chọn table card khi bốc nọc
-    const drawResultValid = turnEngine.processDraw(0, 0); // Bốc AD ăn 9H
-    runTest("processDraw() capture hợp lệ -> captured=true", true, drawResultValid.captured);
+    gameState.tableCards = [{id: '9H', rank: '9', suit: 'H'}, {id: 'AC', rank: 'A', suit: 'C'}];
+    const drawResultValid = turnEngine.processDraw(0); // Bốc AD tự động ăn 9H
+    runTest("processDraw() auto capture hợp lệ -> captured=true", true, drawResultValid.captured);
+    runTest("processDraw() ăn đúng lá 9H", '9H', drawResultValid.tableCard.id);
     
     gameState.deck = [{id: '7S', rank: '7', suit: 'S'}];
-    const drawResultDrop = turnEngine.processDraw(0, null); // Không chọn -> đặt xuống bàn
-    runTest("processDraw() không chọn bàn -> captured=false", false, drawResultDrop.captured);
-    runTest("processDraw() đặt lá bốc xuống bàn", 1, gameState.tableCards.length);
+    const drawResultDrop = turnEngine.processDraw(0); // Không ăn được -> đặt xuống bàn
+    runTest("processDraw() không ăn được -> captured=false", false, drawResultDrop.captured);
+    runTest("processDraw() đặt lá bốc xuống bàn", 2, gameState.tableCards.length);
 
     // test isRoundFinished
     gameState.deck = [];

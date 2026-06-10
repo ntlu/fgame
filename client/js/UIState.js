@@ -1,20 +1,13 @@
-import { RuleEngine } from './RuleEngine.js';
+import { RuleEngine } from '/shared/RuleEngine.js';
 
 export class UIState {
     constructor() {
         this.selectedHandCardId = null;
         this.selectedTableCardId = null;
         this.capturableTableCardIds = [];
-        this.lastAction = 'None';
-        this.gameLogs = [];
     }
 
-    addLog(msg) {
-        this.gameLogs.push(msg);
-        if (this.gameLogs.length > 20) {
-            this.gameLogs.shift();
-        }
-    }
+
 
     selectHandCard(cardId) {
         if (this.selectedHandCardId === cardId) {
