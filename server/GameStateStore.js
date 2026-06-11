@@ -1,6 +1,7 @@
 import { GameState } from '../shared/GameState.js';
 import { GameManager } from '../shared/GameManager.js';
 import { TurnEngine } from '../shared/TurnEngine.js';
+import { RuleEngine } from '../shared/RuleEngine.js';
 
 class GameStateStore {
     constructor() {
@@ -22,13 +23,24 @@ class GameStateStore {
         const currentAssignments = this.gameState.playerAssignments || {};
         const currentHost = this.gameState.hostPlayerIndex;
         const preservedNames = this.gameState.players.map((p, idx) => p.name || `Người chơi ${idx + 1}`);
+        const preservedAccumulatedScores = this.gameState.players.map(p => p.accumulatedScore || 0);
+        const preservedTotalRoundsPlayed = this.gameState.totalRoundsPlayed || 0;
+        const preservedDoubleRoundsCount = this.gameState.doubleRoundsCount || 0;
+        const preservedMoney = this.gameState.players.map(p => p.money !== undefined ? p.money : 10000000);
+
+        // Increment round
+        this.gameState.round++;
 
         this.gameManager.startNewRound();
 
-        // Restore preserved names
+        // Restore preserved names & accumulated stats
         this.gameState.players.forEach((p, idx) => {
             p.name = preservedNames[idx];
+            p.accumulatedScore = preservedAccumulatedScores[idx];
+            p.money = preservedMoney[idx];
         });
+        this.gameState.totalRoundsPlayed = preservedTotalRoundsPlayed;
+        this.gameState.doubleRoundsCount = preservedDoubleRoundsCount;
 
         this.gameState.version = currentVersion + 1;
         this.gameState.playerAssignments = currentAssignments;
@@ -53,6 +65,10 @@ class GameStateStore {
                 
                 const actualName = (name && name.trim()) ? name.trim() : `Người chơi ${i + 1}`;
                 this.gameState.players[i].name = actualName;
+                
+                if (this.gameState.players[i].money === undefined || this.gameState.players[i].money === null) {
+                    this.gameState.players[i].money = 10000000;
+                }
                 
                 this.updateHostPlayerIndex();
                 return i;
@@ -111,6 +127,16 @@ class GameStateStore {
         return this.gameState;
     }
 
+    calculateSecretCardBonus(card) {
+        if (!card || !card.isRed) return 0;
+        const rank = card.rank;
+        if (rank === 'A') return 20;
+        if (['9', '10', 'J', 'Q', 'K'].includes(rank)) return 10;
+        const val = parseInt(rank, 10);
+        if (!isNaN(val) && val >= 2 && val <= 8) return val;
+        return 0;
+    }
+
     processTurn(handCardId, tableCardId) {
         if (this.processingTurn) {
             return false;
@@ -163,9 +189,71 @@ class GameStateStore {
 
             // Check Round End
             if (this.turnEngine.isRoundFinished()) {
-                const scores = this.turnEngine.calculateRoundScores();
-                const settlement = this.turnEngine.calculateSettlement();
-                this.gameState.roundResult = { scores, settlement };
+                this.gameState.secretCardRevealed = true;
+                
+                const cardScores = this.turnEngine.calculateRoundScores();
+                const ownerIdx = this.gameState.secretCardOwner;
+                const secretCard = this.gameState.secretCard;
+                const bonus = this.calculateSecretCardBonus(secretCard);
+                this.gameState.secretCardBonus = bonus;
+
+                // 1. Calculate adjusted scores for double/X2 check
+                const adjustedScores = [...cardScores];
+                if (ownerIdx !== null && ownerIdx !== undefined) {
+                    adjustedScores[ownerIdx] += bonus;
+                }
+
+                // 2. Check double condition on adjusted score (>= 90 points triggers X2)
+                const hasDouble = adjustedScores.some(score => score >= 90);
+                if (this.gameState.totalRoundsPlayed === undefined) this.gameState.totalRoundsPlayed = 0;
+                if (this.gameState.doubleRoundsCount === undefined) this.gameState.doubleRoundsCount = 0;
+
+                this.gameState.totalRoundsPlayed++;
+                if (hasDouble) {
+                    this.gameState.doubleRoundsCount++;
+                }
+
+                // 3. Zero-sum Settlement with multiplier
+                const multiplier = hasDouble ? 2 : 1;
+                const settlement = adjustedScores.map((score, idx) => {
+                    const baseProfit = score - 55;
+                    if (idx === ownerIdx) {
+                        return (baseProfit + bonus * 2) * multiplier;
+                    } else {
+                        return (baseProfit - bonus) * multiplier;
+                    }
+                });
+
+                // Calculate moneyChange: 1 point = 1,000 VNĐ
+                const moneyChange = settlement.map(s => s * 1000);
+
+                // Apply money changes to players
+                this.gameState.players.forEach((p, idx) => {
+                    if (p.money === undefined) p.money = 10000000;
+                    p.money += moneyChange[idx];
+                });
+
+                // 4. Save detailed roundResult
+                this.gameState.roundResult = {
+                    scores: cardScores, // card scores
+                    settlement: settlement,
+                    moneyChange: moneyChange,
+                    secretCard: secretCard ? `${secretCard.rank}${secretCard.suit}` : null,
+                    secretCardOwner: ownerIdx,
+                    secretCardBonus: bonus
+                };
+
+                // 5. Log end of round reveal
+                const suitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
+                const secretCardStr = secretCard ? `${secretCard.rank}${suitMap[secretCard.suit]}` : 'Không';
+                const ownerName = this.gameState.players[ownerIdx]?.name || `Người chơi ${ownerIdx + 1}`;
+                this.addLog(`[BÍ MẬT] Lá bài Bí Mật cuối ván là ${secretCardStr} thuộc về ${ownerName} (Thưởng: +${bonus})`);
+
+                // 6. Accumulate player scores
+                this.gameState.players.forEach((p, idx) => {
+                    if (p.accumulatedScore === undefined) p.accumulatedScore = 0;
+                    p.accumulatedScore += settlement[idx];
+                });
             } else {
                 this.turnEngine.nextTurn();
             }

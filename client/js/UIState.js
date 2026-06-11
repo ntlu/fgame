@@ -5,6 +5,7 @@ export class UIState {
         this.selectedHandCardId = null;
         this.selectedTableCardId = null;
         this.capturableTableCardIds = [];
+        this.secretCardOpen = false;
     }
 
 
@@ -45,6 +46,7 @@ export class UIState {
         this.selectedHandCardId = null;
         this.selectedTableCardId = null;
         this.capturableTableCardIds = [];
+        this.secretCardOpen = false;
     }
 
     hasSelection() {

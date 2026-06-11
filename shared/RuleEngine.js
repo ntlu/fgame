@@ -4,6 +4,7 @@ export class RuleEngine {
 
     // YÊU CẦU 2: canCapture
     static canCapture(cardA, cardB) {
+        if (!cardA || !cardB) return false;
         const rankA = cardA.rank || cardA;
         const rankB = cardB.rank || cardB;
 
@@ -26,7 +27,7 @@ export class RuleEngine {
 
     // YÊU CẦU 3: findCapturableCards
     static findCapturableCards(playedCard, tableCards) {
-        return tableCards.filter(tableCard => this.canCapture(playedCard, tableCard));
+        return tableCards.filter(tableCard => tableCard && this.canCapture(playedCard, tableCard));
     }
 
     // YÊU CẦU 4: calculateCardScore

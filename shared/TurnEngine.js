@@ -41,16 +41,20 @@ export class TurnEngine {
         if (selectedTableCardIndex !== null && selectedTableCardIndex >= 0 && selectedTableCardIndex < this.gameState.tableCards.length) {
             const tableCard = this.gameState.tableCards[selectedTableCardIndex];
             
-            // Xác nhận lá trên bàn hợp lệ mới được ăn
             if (this.validateCaptureSelection(playedCard, tableCard) && this.captureCard(playedCard, tableCard)) {
-                this.gameState.tableCards.splice(selectedTableCardIndex, 1);
+                this.gameState.tableCards[selectedTableCardIndex] = null;
                 player.capturedCards.push(playedCard, tableCard);
                 return { playedCard, tableCard, captured: true };
             }
         }
         
         // Không ăn được hoặc chọn sai => đưa xuống bàn
-        this.gameState.tableCards.push(playedCard);
+        const emptyIndex = this.gameState.tableCards.indexOf(null);
+        if (emptyIndex !== -1) {
+            this.gameState.tableCards[emptyIndex] = playedCard;
+        } else {
+            this.gameState.tableCards.push(playedCard);
+        }
         return { playedCard, tableCard: null, captured: false };
     }
 
@@ -71,14 +75,19 @@ export class TurnEngine {
         if (possibleCards.length > 0) {
             // Auto capture first possible card
             const tableCard = possibleCards[0];
-            const tableCardIndex = this.gameState.tableCards.findIndex(c => c.id === tableCard.id);
-            this.gameState.tableCards.splice(tableCardIndex, 1);
+            const tableCardIndex = this.gameState.tableCards.findIndex(c => c && c.id === tableCard.id);
+            this.gameState.tableCards[tableCardIndex] = null;
             player.capturedCards.push(drawnCard, tableCard);
             return { drawnCard, tableCard, captured: true };
         }
 
         // Không ăn được => đưa xuống bàn
-        this.gameState.tableCards.push(drawnCard);
+        const emptyIndex = this.gameState.tableCards.indexOf(null);
+        if (emptyIndex !== -1) {
+            this.gameState.tableCards[emptyIndex] = drawnCard;
+        } else {
+            this.gameState.tableCards.push(drawnCard);
+        }
         return { drawnCard, tableCard: null, captured: false };
     }
 

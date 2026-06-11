@@ -45,12 +45,24 @@ export class GameManager {
             this.gameState.tableCards.push(this.gameState.deck.pop());
         }
 
+        // Deal Secret Card logic
+        if (this.gameState.deck.length > 0) {
+            const secretCard = this.gameState.deck.pop();
+            this.gameState.secretCard = secretCard;
+            this.gameState.secretCardOwner = (this.gameState.dealerIndex + 3) % 4; // Rotate based on dealer
+            this.gameState.secretCardRevealed = false;
+            this.gameState.secretCardBonus = 0;
+            
+            // Put the secret card at the bottom of the deck/Que (index 0)
+            this.gameState.deck.unshift(secretCard);
+        }
+
         this.validateGameState();
     }
 
     validateGameState() {
         const totalCardsAfterDeal = this.gameState.deck.length + 
-            this.gameState.tableCards.length + 
+            this.gameState.tableCards.filter(c => c !== null).length + 
             this.gameState.players.reduce((sum, p) => sum + p.hand.length, 0);
         
         if (totalCardsAfterDeal !== 52) {

@@ -29,8 +29,21 @@ function init() {
         }
         
         uiState.clearSelection(); // Clear UI selection whenever server state is received
-        renderer.render();
+        renderer.animateAndRender();
     });
+
+    // Sidebar toggle behavior
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-open');
+        });
+    }
+
+    // Desktop default open (>= 1200px)
+    if (window.innerWidth >= 1200) {
+        document.body.classList.add('sidebar-open');
+    }
 }
 
 // Helper to check state origin

@@ -61,6 +61,13 @@ function getFilteredStateForPlayer(gameState, playerIndex) {
             }
         });
     }
+
+    // Secure Secret Card: only owner can see it unless revealed
+    if (stateCopy.secretCardOwner !== undefined && stateCopy.secretCardOwner !== null) {
+        if (!stateCopy.secretCardRevealed && stateCopy.secretCardOwner !== playerIndex) {
+            stateCopy.secretCard = null;
+        }
+    }
     
     return stateCopy;
 }
