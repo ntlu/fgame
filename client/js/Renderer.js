@@ -291,8 +291,8 @@ export class Renderer {
             info.className = 'player-info';
             info.innerHTML = `
                 <strong>${player.name || 'Người chơi ' + player.id}</strong><br>
-                <span style="color: #fbbf24; font-weight: bold; font-size: 13px;">💰 ${this.formatMoney(player.money)} VNĐ</span><br>
-                Đã ăn: ${player.capturedCards.length} lá | Điểm: ${player.score}
+                <span style="color: #fbbf24; font-weight: bold; font-size: 10px;">💰 ${this.formatMoney(player.money)} VNĐ</span><br>
+                <span style="font-size: 10px;">Đã ăn: ${player.capturedCards.length} lá | Điểm: ${player.score}</span>
                 <div class="captured-preview">
                     ${capturedHtml}
                 </div>
@@ -322,9 +322,9 @@ export class Renderer {
             const info = document.createElement('div');
             info.className = 'player-info';
             info.innerHTML = `
-                <strong>${player.name || 'Người chơi ' + player.id} (Bạn)</strong><br>
-                <span style="color: #fbbf24; font-weight: bold; font-size: 13px;">💰 ${this.formatMoney(player.money)} VNĐ</span><br>
-                Số bài: ${player.hand.length} lá | Đã ăn: ${player.capturedCards.length} lá | Điểm: ${player.score}
+                <strong>${player.name || 'Người chơi ' + player.id} (Bạn)</strong>
+                <span style="color: #fbbf24; font-weight: bold; font-size: 11px;">💰 ${this.formatMoney(player.money)} VNĐ</span><br>
+                <span style="font-size: 11px;">Số bài: ${player.hand.length} lá | Đã ăn: ${player.capturedCards.length} lá | Điểm: ${player.score}</span>
                 <div class="captured-preview">
                     ${capturedHtml}
                 </div>
@@ -353,6 +353,14 @@ export class Renderer {
             }
         }
 
+        const actionZone = document.createElement('div');
+        actionZone.className = 'action-zone';
+        actionZone.innerHTML = `
+            <div class="action-slot primary-slot"></div>
+            <div class="action-slot secondary-slot"></div>
+        `;
+        div.appendChild(actionZone);
+
         return div;
     }
 
@@ -369,32 +377,29 @@ export class Renderer {
     createTable() {
         const table = document.createElement('div');
         table.className = 'table';
+        table.classList.add('table-8-cols');
 
-        table.classList.add('table-7-cols');
+        const tableCards = this.gameState.tableCards || [];
+        const totalSlots = Math.max(16, tableCards.length + 1); // Đảm bảo đủ chỗ cho nocCard
 
-        const tableCards = this.gameState.tableCards;
+        for (let i = 0; i < totalSlots; i++) {
+            // Đặt Noc Card ở vị trí số 3 (cột thứ 4 của hàng đầu tiên)
+            if (i === 3) {
+                table.appendChild(this.createNocCard(this.gameState.deckRemaining || 0));
+                continue;
+            }
 
-        if (tableCards.length === 0) {
-            table.appendChild(this.createNocCard(this.gameState.deckRemaining || 0));
-        } else {
-            tableCards.forEach((card, idx) => {
-                if (idx === 3) {
-                    const spacer = document.createElement('div');
-                    spacer.style.width = '100%';
-                    spacer.style.height = '100%';
-                    table.appendChild(spacer);
-                }
-                if (idx === 9) {
-                    table.appendChild(this.createNocCard(this.gameState.deckRemaining || 0));
-                }
-                if (card) {
-                    table.appendChild(this.createCard(card, false, false));
-                } else {
-                    const emptySlot = document.createElement('div');
-                    emptySlot.className = 'card empty-slot';
-                    table.appendChild(emptySlot);
-                }
-            });
+            const cardIdx = i > 3 ? i - 1 : i;
+            const card = tableCards[cardIdx];
+
+            if (card) {
+                table.appendChild(this.createCard(card, false, false));
+            } else {
+                // Tạo ô trống
+                const emptySlot = document.createElement('div');
+                emptySlot.className = 'card empty-slot';
+                table.appendChild(emptySlot);
+            }
         }
 
         return table;
@@ -848,69 +853,110 @@ export class Renderer {
                     }
                 }
             }
-            await animateFlight(playedCard, startRect, tableRect, false, 1200);
-        }
 
-        // 2. Capture animation
-        if (action.captured) {
-            const playedCard = this.parseCardString(action.played);
-            const capturedCard = this.parseCardString(action.captured);
+            const actionZone = seatEl.querySelector('.action-zone');
+            const primarySlot = actionZone.querySelector('.primary-slot');
+            const secondarySlot = actionZone.querySelector('.secondary-slot');
+            const primarySlotRect = primarySlot.getBoundingClientRect();
+            const secondarySlotRect = secondarySlot.getBoundingClientRect();
 
-            let capturedRect = tableRect;
-            const tableCards = tableEl.querySelectorAll('.card');
-            let targetEl = null;
-            for (let el of tableCards) {
-                if (el.textContent.includes(capturedCard.rank)) {
-                    capturedRect = el.getBoundingClientRect();
-                    targetEl = el;
-                    break;
+            await animateFlight(playedCard, startRect, primarySlotRect, false, 600);
+            primarySlot.innerHTML = this.createCard(playedCard).innerHTML;
+            primarySlot.className = `action-slot primary-slot card ${playedCard.isRed ? 'red' : 'black'} has-card`;
+
+            if (action.captured) {
+                const capturedCard = this.parseCardString(action.captured);
+
+                let capturedRect = tableRect;
+                const tableCards = tableEl.querySelectorAll('.card');
+                let targetEl = null;
+                for (let el of tableCards) {
+                    if (el.textContent.includes(capturedCard.rank)) {
+                        capturedRect = el.getBoundingClientRect();
+                        targetEl = el;
+                        break;
+                    }
                 }
-            }
 
-            if (targetEl) {
-                targetEl.classList.add('flash-capture');
+                if (targetEl) {
+                    targetEl.classList.add('flash-capture');
+                    await new Promise(r => setTimeout(r, 600));
+                    targetEl.style.opacity = '0';
+                }
+
+                await animateFlight(capturedCard, capturedRect, secondarySlotRect, false, 600);
+                secondarySlot.innerHTML = this.createCard(capturedCard).innerHTML;
+                secondarySlot.className = `action-slot secondary-slot card ${capturedCard.isRed ? 'red' : 'black'} has-card`;
+
                 await new Promise(r => setTimeout(r, 800));
-                targetEl.style.opacity = '0';
+
+                await Promise.all([
+                    animateFlight(playedCard, primarySlotRect, seatRect, true, 600),
+                    animateFlight(capturedCard, secondarySlotRect, seatRect, true, 600)
+                ]);
+            } else {
+                await new Promise(r => setTimeout(r, 800));
+                await animateFlight(playedCard, primarySlotRect, tableRect, true, 600);
             }
 
-            await Promise.all([
-                animateFlight(playedCard, tableRect, seatRect, true, 800),
-                animateFlight(capturedCard, capturedRect, seatRect, true, 800)
-            ]);
+            primarySlot.innerHTML = '';
+            primarySlot.className = 'action-slot primary-slot';
+            secondarySlot.innerHTML = '';
+            secondarySlot.className = 'action-slot secondary-slot';
         }
 
-        // 3. Draw card animation
+        // 2. Draw card animation
         if (action.drawn) {
             const drawnCard = this.parseCardString(action.drawn);
-            await animateFlight(drawnCard, nocRect, tableRect, false, 1200);
-        }
+            const actionZone = seatEl.querySelector('.action-zone');
+            const primarySlot = actionZone.querySelector('.primary-slot');
+            const secondarySlot = actionZone.querySelector('.secondary-slot');
+            const primarySlotRect = primarySlot.getBoundingClientRect();
+            const secondarySlotRect = secondarySlot.getBoundingClientRect();
 
-        // 4. Auto capture drawn card animation
-        if (action.autoCaptured) {
-            const drawnCard = this.parseCardString(action.drawn);
-            const autoCapturedCard = this.parseCardString(action.autoCaptured);
+            await animateFlight(drawnCard, nocRect, primarySlotRect, false, 600);
+            primarySlot.innerHTML = this.createCard(drawnCard).innerHTML;
+            primarySlot.className = `action-slot primary-slot card ${drawnCard.isRed ? 'red' : 'black'} has-card`;
 
-            let capturedRect = tableRect;
-            const tableCards = tableEl.querySelectorAll('.card');
-            let targetEl = null;
-            for (let el of tableCards) {
-                if (el.textContent.includes(autoCapturedCard.rank)) {
-                    capturedRect = el.getBoundingClientRect();
-                    targetEl = el;
-                    break;
+            if (action.autoCaptured) {
+                const autoCapturedCard = this.parseCardString(action.autoCaptured);
+
+                let capturedRect = tableRect;
+                const tableCards = tableEl.querySelectorAll('.card');
+                let targetEl = null;
+                for (let el of tableCards) {
+                    if (el.textContent.includes(autoCapturedCard.rank)) {
+                        capturedRect = el.getBoundingClientRect();
+                        targetEl = el;
+                        break;
+                    }
                 }
-            }
 
-            if (targetEl) {
-                targetEl.classList.add('flash-capture');
+                if (targetEl) {
+                    targetEl.classList.add('flash-capture');
+                    await new Promise(r => setTimeout(r, 600));
+                    targetEl.style.opacity = '0';
+                }
+
+                await animateFlight(autoCapturedCard, capturedRect, secondarySlotRect, false, 600);
+                secondarySlot.innerHTML = this.createCard(autoCapturedCard).innerHTML;
+                secondarySlot.className = `action-slot secondary-slot card ${autoCapturedCard.isRed ? 'red' : 'black'} has-card`;
+
                 await new Promise(r => setTimeout(r, 800));
-                targetEl.style.opacity = '0';
+
+                await Promise.all([
+                    animateFlight(drawnCard, primarySlotRect, seatRect, true, 600),
+                    animateFlight(autoCapturedCard, secondarySlotRect, seatRect, true, 600)
+                ]);
+            } else {
+                await new Promise(r => setTimeout(r, 800));
+                await animateFlight(drawnCard, primarySlotRect, tableRect, true, 600);
             }
 
-            await Promise.all([
-                animateFlight(drawnCard, tableRect, seatRect, true, 800),
-                animateFlight(autoCapturedCard, capturedRect, seatRect, true, 800)
-            ]);
+            primarySlot.innerHTML = '';
+            primarySlot.className = 'action-slot primary-slot';
+            secondarySlot.innerHTML = '';
+            secondarySlot.className = 'action-slot secondary-slot';
         }
 
         onComplete();

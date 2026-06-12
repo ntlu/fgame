@@ -141,8 +141,10 @@ body.sidebar-open .sidebar-toggle-btn {
         ".       top     ."
         "left    table   right"
         ".       bottom  .";
-    gap: 25px;
-    padding: 20px 40px;
+    gap: 10px;
+    /* Giảm gap giữa người chơi và bàn */
+    padding: 10px 20px;
+    /* Giảm padding tổng thể */
     transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -163,10 +165,12 @@ body.sidebar-open .container {
     justify-content: center;
     background: #1f2937;
     border-radius: 12px;
-    padding: 15px;
+    padding: 10px;
+    /* Giảm padding */
     border: 2px solid transparent;
     transition: all 0.3s ease;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    position: relative;
 }
 
 .player.current-turn {
@@ -184,7 +188,7 @@ body.sidebar-open .container {
 }
 
 .player-info strong {
-    font-size: 16px;
+    font-size: 14px;
     color: #fbbf24;
 }
 
@@ -279,19 +283,36 @@ body.sidebar-open .container {
 .table {
     grid-area: table;
     display: grid;
-    gap: 10px;
+    gap: 6px;
+    /* Giảm gap giữa các lá bài */
     background: #064e3b;
-    /* Forest green felt */
     border-radius: 16px;
-    padding: 20px;
+    padding: 10px;
+    /* Giảm padding của bàn */
     justify-content: center;
     align-content: center;
     box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.5);
     border: 3px solid #047857;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 700px;
+    /* Giới hạn bàn không vượt quá 700px trên màn to */
 }
 
-.table.table-7-cols {
-    grid-template-columns: repeat(7, minmax(50px, 80px));
+.table.table-8-cols {
+    grid-template-columns: repeat(8, 1fr);
+    width: 100%;
+}
+
+.table .card,
+.table .noc-card,
+.table .empty-slot {
+    width: 100%;
+    max-width: 50px;
+    /* Thu nhỏ các lá bài trên bàn */
+    height: auto;
+    aspect-ratio: 2 / 3;
+    margin: 0 auto;
 }
 
 /* Card Styling */
@@ -306,8 +327,7 @@ body.sidebar-open .container {
     justify-content: space-between;
     padding: 5px;
     font-weight: 800;
-    font-size: 20px;
-    /* Tăng kích thước chữ/số góc */
+    font-size: 16px;
     user-select: none;
     position: relative;
     transition: transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
@@ -328,8 +348,7 @@ body.sidebar-open .container {
 }
 
 .card-center {
-    font-size: 28px;
-    /* Tăng kích thước biểu tượng giữa */
+    font-size: 24px;
     text-align: center;
     flex-grow: 1;
     display: flex;
@@ -419,7 +438,27 @@ body.sidebar-open .container {
     z-index: 10;
 }
 
-/* Action Panel */
+/* Hand with Action Buttons Wrapper */
+.hand-action-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    width: 100%;
+}
+
+.action-btn-container button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
 .action-panel {
     display: flex;
     gap: 15px;
@@ -616,11 +655,66 @@ body.sidebar-open .container {
 
 .floating-anim-card {
     position: absolute;
-    width: 56px;
-    height: 84px;
+    width: 48px;
+    /* Khớp với action-slot mới */
+    height: 72px;
     transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.45s ease;
     z-index: 10000;
     pointer-events: none;
+}
+
+/* Action Zone cho Bài Đánh/Ăn */
+.action-zone {
+    position: absolute;
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+}
+
+.player-bottom .action-zone {
+    top: -85px;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: row;
+}
+
+.player-top .action-zone {
+    bottom: -85px;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: row;
+}
+
+.player-left .action-zone {
+    right: -60px;
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: column;
+}
+
+.player-right .action-zone {
+    left: -60px;
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: column;
+}
+
+.action-slot {
+    width: 48px;
+    /* Kích thước nhỏ hơn */
+    height: 72px;
+    border: 2px dashed #dc2626;
+    /* Đánh dấu màu đỏ */
+    border-radius: 6px;
+    background: rgba(220, 38, 38, 0.1);
+    box-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
+    transition: all 0.3s ease;
+}
+
+.action-slot.has-card {
+    border: 2px solid #dc2626;
+    background: white;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.6);
 }
 
 /* Responsive Overrides */
@@ -638,9 +732,9 @@ body.sidebar-open .container {
         padding: 10px 15px;
         gap: 12px;
     }
-    
-    .table.table-7-cols {
-        grid-template-columns: repeat(7, minmax(40px, 1fr));
+
+    .table.table-8-cols {
+        grid-template-columns: repeat(8, 0fr);
     }
 
     .card {
@@ -649,7 +743,7 @@ body.sidebar-open .container {
         font-size: 11px;
         padding: 3px;
     }
-    
+
     .card-center {
         font-size: 18px;
     }
@@ -689,6 +783,27 @@ body.sidebar-open .container {
         top: -6px;
         right: -6px;
     }
+
+    .action-slot {
+        width: 38px;
+        height: 57px;
+    }
+
+    .player-bottom .action-zone {
+        top: -50px;
+    }
+
+    .player-top .action-zone {
+        bottom: -50px;
+    }
+
+    .player-left .action-zone {
+        right: -55px;
+    }
+
+    .player-right .action-zone {
+        left: -55px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -713,9 +828,9 @@ body.sidebar-open .container {
         padding: 8px;
         gap: 4px;
     }
-    
-    .table.table-7-cols {
-        grid-template-columns: repeat(7, minmax(32px, 1fr));
+
+    .table.table-8-cols {
+        grid-template-columns: repeat(8, 1fr);
     }
 
     .card {
@@ -773,6 +888,27 @@ body.sidebar-open .container {
 
     .noc-card .noc-count {
         font-size: 14px;
+    }
+
+    .action-slot {
+        width: 36px;
+        height: 54px;
+    }
+
+    .player-bottom .action-zone {
+        top: -65px;
+    }
+
+    .player-top .action-zone {
+        bottom: -65px;
+    }
+
+    .player-left .action-zone {
+        right: -50px;
+    }
+
+    .player-right .action-zone {
+        left: -50px;
     }
 }
 
