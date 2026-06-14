@@ -42,9 +42,26 @@ export class TurnEngine {
             const tableCard = this.gameState.tableCards[selectedTableCardIndex];
             
             if (this.validateCaptureSelection(playedCard, tableCard) && this.captureCard(playedCard, tableCard)) {
+                // CHECK FOR 3-MATCH ON TABLE (5, 10, J, Q, K)
+                const autoCaptureRanks = ['5', '10', 'J', 'Q', 'K'];
+                if (autoCaptureRanks.includes(playedCard.rank)) {
+                    const matchingTableCards = this.gameState.tableCards.filter(c => c && c.rank === playedCard.rank);
+                    if (matchingTableCards.length === 3) {
+                        player.capturedCards.push(playedCard);
+                        matchingTableCards.forEach(mc => {
+                            const idx = this.gameState.tableCards.findIndex(c => c && c.id === mc.id);
+                            this.gameState.tableCards[idx] = null;
+                            player.capturedCards.push(mc);
+                        });
+                        player.score = RuleEngine.calculatePlayerScore(player.capturedCards);
+                        return { playedCard, tableCard: matchingTableCards, captured: true };
+                    }
+                }
+
                 this.gameState.tableCards[selectedTableCardIndex] = null;
                 player.capturedCards.push(playedCard, tableCard);
-                return { playedCard, tableCard, captured: true };
+                player.score = RuleEngine.calculatePlayerScore(player.capturedCards);
+                return { playedCard, tableCard: [tableCard], captured: true };
             }
         }
         
@@ -73,12 +90,29 @@ export class TurnEngine {
         const possibleCards = RuleEngine.findCapturableCards(drawnCard, this.gameState.tableCards);
         
         if (possibleCards.length > 0) {
+            // CHECK FOR 3-MATCH ON TABLE (5, 10, J, Q, K)
+            const autoCaptureRanks = ['5', '10', 'J', 'Q', 'K'];
+            if (autoCaptureRanks.includes(drawnCard.rank)) {
+                const matchingTableCards = this.gameState.tableCards.filter(c => c && c.rank === drawnCard.rank);
+                if (matchingTableCards.length === 3) {
+                    player.capturedCards.push(drawnCard);
+                    matchingTableCards.forEach(mc => {
+                        const idx = this.gameState.tableCards.findIndex(c => c && c.id === mc.id);
+                        this.gameState.tableCards[idx] = null;
+                        player.capturedCards.push(mc);
+                    });
+                    player.score = RuleEngine.calculatePlayerScore(player.capturedCards);
+                    return { drawnCard, tableCard: matchingTableCards, captured: true };
+                }
+            }
+
             // Auto capture first possible card
             const tableCard = possibleCards[0];
             const tableCardIndex = this.gameState.tableCards.findIndex(c => c && c.id === tableCard.id);
             this.gameState.tableCards[tableCardIndex] = null;
             player.capturedCards.push(drawnCard, tableCard);
-            return { drawnCard, tableCard, captured: true };
+            player.score = RuleEngine.calculatePlayerScore(player.capturedCards);
+            return { drawnCard, tableCard: [tableCard], captured: true };
         }
 
         // Không ăn được => đưa xuống bàn

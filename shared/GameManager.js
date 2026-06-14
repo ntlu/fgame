@@ -8,8 +8,8 @@ export class GameManager {
     startNewRound() {
         this.gameState.resetForNewRound();
         
-        // Dealer rotation: Round 1 -> P1 (index 0), Round 2 -> P2 (index 1), v.v.
-        this.gameState.dealerIndex = (this.gameState.round - 1) % 4;
+        // Dealer rotation
+        this.gameState.dealerIndex = (this.gameState.round - 1) % this.gameState.modeConfig.players;
         this.gameState.currentPlayerIndex = this.gameState.dealerIndex;
 
         this.dealCards();
@@ -33,9 +33,12 @@ export class GameManager {
     dealCards() {
         this.gameState.deck = this.createAndShuffleDeck();
         
-        // Deal 5 cards to 4 players
-        for(let i = 0; i < 5; i++){
-            for(let p = 0; p < 4; p++){
+        // Deal cards to players
+        const cardsPerPlayer = this.gameState.modeConfig.cardsPerPlayer;
+        const playersCount = this.gameState.modeConfig.players;
+        
+        for(let i = 0; i < cardsPerPlayer; i++){
+            for(let p = 0; p < playersCount; p++){
                 this.gameState.players[p].hand.push(this.gameState.deck.pop());
             }
         }
@@ -49,7 +52,7 @@ export class GameManager {
         if (this.gameState.deck.length > 0) {
             const secretCard = this.gameState.deck.pop();
             this.gameState.secretCard = secretCard;
-            this.gameState.secretCardOwner = (this.gameState.dealerIndex + 3) % 4; // Rotate based on dealer
+            this.gameState.secretCardOwner = (this.gameState.dealerIndex + playersCount - 1) % playersCount; // Rotate based on dealer
             this.gameState.secretCardRevealed = false;
             this.gameState.secretCardBonus = 0;
             

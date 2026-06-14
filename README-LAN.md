@@ -68,6 +68,29 @@ Tất cả Clients (Xóa lựa chọn cũ, cập nhật UI và hiển thị Serv
 - Client chỉ hiển thị nút **Đánh bài** và cho phép tương tác bài khi tới lượt chơi của mình. Nếu không đúng lượt, nút đánh bài sẽ bị vô hiệu hóa kèm nhãn hiển thị **Not Your Turn**.
 - Server sẽ thực hiện kiểm tra chéo (`socket.id` -> `playerAssignments` -> `playerIndex` và so sánh với `currentPlayerIndex`). Mọi hành vi cố tình gửi gói tin lượt đánh từ client không đúng lượt sẽ bị Server từ chối xử lý.
 
+## Đăng nhập & Chọn Chế Độ (Milestone 8.0 & 8.5)
+
+Trò chơi áp dụng cơ chế xác thực đơn giản để hỗ trợ cho việc quản lý phòng và các tính năng AI, Offline.
+
+### Login Flow
+1. **Mở game**: Người chơi sẽ luôn thấy màn hình Login đầu tiên nếu chưa đăng nhập.
+2. **Nhập mã (Access Code)**: Tương ứng với danh sách mã cứng bên dưới.
+3. **Chọn chế độ (Game Mode Screen)**: 
+   - Sau khi login thành công, UI sẽ chuyển sang màn hình Chọn chế độ.
+   - Các chế độ đang mở:
+     - **Online 4 Người**: Chế độ chơi qua mạng LAN bằng Socket.IO (5 lá/người).
+     - **Offline 2 Người (User vs AI)**: Chế độ chơi local không cần mạng, đấu với AI cơ bản (10 lá/người, mốc x2 là 145 điểm). AI ưu tiên ăn bài, nếu không có thì đánh ngẫu nhiên.
+4. **Vào Lobby / Game**: Khi ấn chọn chế độ, Client sẽ khởi tạo môi trường tương ứng (Socket.IO hoặc OfflineGameStore).
+
+### Danh sách Access Code (Hardcode)
+- Mã `111` -> Người dùng: **NV1**
+- Mã `222` -> Người dùng: **NV2**
+- Mã `333` -> Người dùng: **NV3**
+- Mã `444` -> Người dùng: **NV4**
+
+### Ngăn chặn đăng nhập trùng
+Server tự động quản lý danh sách `activeUsers`. Nếu phát hiện NV1 đã đăng nhập và đang kết nối trên một trình duyệt khác, trình duyệt sau cố gắng kết nối bằng NV1 sẽ bị Server từ chối kèm thông báo: *"Tài khoản đang được sử dụng"*. Trạng thái login lưu tại `localStorage` để tự động vào Game Mode Screen ở lần tải trang sau.
+
 ## Hướng dẫn chạy thử nghiệm mạng LAN
 
 ### Bước 1: Cài đặt dependencies

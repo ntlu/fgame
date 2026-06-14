@@ -37,6 +37,7 @@ function getLocalIP() {
 }
 
 let connectedClients = 0;
+const activeUsers = new Map(); // username -> socket.id
 
 // Initialize Server GameState
 gameStateStore.initializeGame();
@@ -91,6 +92,15 @@ io.on('connection', (socket) => {
         connectedClients--;
         console.log(`Client ngắt kết nối: ${socket.id}. Tổng số: ${connectedClients}`);
         
+        // Remove from activeUsers
+        for (const [username, id] of activeUsers.entries()) {
+            if (id === socket.id) {
+                activeUsers.delete(username);
+                console.log(`Đã giải phóng user: ${username}`);
+                break;
+            }
+        }
+
         // Release seat assignment
         gameStateStore.removeAssignment(socket.id);
         
@@ -122,6 +132,21 @@ io.on('connection', (socket) => {
     // Milestone 7D specific events
     socket.on('joinGame', (data) => {
         const name = (data && typeof data.name === 'string') ? data.name : '';
+        
+        if (!name) {
+            socket.emit('joinError', 'Tên đăng nhập không hợp lệ.');
+            return;
+        }
+
+        // Check for duplicate login
+        if (activeUsers.has(name) && activeUsers.get(name) !== socket.id) {
+            console.log(`[Đăng nhập trùng] User ${name} đang online.`);
+            socket.emit('joinError', 'Tài khoản đang được sử dụng.');
+            return;
+        }
+
+        activeUsers.set(name, socket.id);
+
         const playerIndex = gameStateStore.assignPlayer(socket.id, name);
         if (playerIndex === -1) {
             socket.emit('gameFull');

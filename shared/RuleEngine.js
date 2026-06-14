@@ -57,21 +57,20 @@ export class RuleEngine {
     }
 
     // YÊU CẦU 6: calculateProfit
-    static calculateProfit(score) {
-        const BASE_SCORE = 55;
-        return score - BASE_SCORE;
+    static calculateProfit(score, config = { breakEvenScore: 55 }) {
+        return score - config.breakEvenScore;
     }
 
     // YÊU CẦU 7: hasDoubleCondition
-    static hasDoubleCondition(score) {
-        return this.calculateProfit(score) > 35;
+    static hasDoubleCondition(score, config = { x2Threshold: 90 }) {
+        return score >= config.x2Threshold;
     }
 
     // YÊU CẦU 8: calculateSettlement
-    static calculateSettlement(scores) {
-        const hasDouble = scores.some(score => this.hasDoubleCondition(score));
+    static calculateSettlement(scores, config = { breakEvenScore: 55, x2Threshold: 90 }) {
+        const hasDouble = scores.some(score => this.hasDoubleCondition(score, config));
         const multiplier = hasDouble ? 2 : 1;
 
-        return scores.map(score => this.calculateProfit(score) * multiplier);
+        return scores.map(score => this.calculateProfit(score, config) * multiplier);
     }
 }

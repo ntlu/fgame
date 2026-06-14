@@ -26,26 +26,49 @@ export class Renderer {
             ? this.network.localPlayerIndex
             : 0;
 
-        // Rotate seats relative to local player index
-        const bottomPlayer = this.gameState.players[localIdx];
-        const rightPlayer = this.gameState.players[(localIdx + 1) % 4];
-        const topPlayer = this.gameState.players[(localIdx + 2) % 4];
-        const leftPlayer = this.gameState.players[(localIdx + 3) % 4];
+        const playersCount = this.gameState.modeConfig ? this.gameState.modeConfig.players : 4;
 
-        // P3 phía trên (rotated top)
-        this.container.appendChild(this.createPlayer(topPlayer, 'player-top'));
+        if (playersCount === 2) {
+            const bottomPlayer = this.gameState.players[localIdx];
+            const topPlayer = this.gameState.players[(localIdx + 1) % 2];
 
-        // P4 bên trái (rotated left)
-        this.container.appendChild(this.createPlayer(leftPlayer, 'player-left'));
+            this.container.appendChild(this.createPlayer(topPlayer, 'player-top'));
+            this.container.appendChild(this.createTable());
+            this.container.appendChild(this.createPlayer(bottomPlayer, 'player-bottom'));
+        } else {
+            const bottomPlayer = this.gameState.players[localIdx];
+            const rightPlayer = this.gameState.players[(localIdx + 1) % 4];
+            const topPlayer = this.gameState.players[(localIdx + 2) % 4];
+            const leftPlayer = this.gameState.players[(localIdx + 3) % 4];
 
-        // Bàn chơi
-        this.container.appendChild(this.createTable());
+            this.container.appendChild(this.createPlayer(topPlayer, 'player-top'));
+            this.container.appendChild(this.createPlayer(leftPlayer, 'player-left'));
+            this.container.appendChild(this.createTable());
+            this.container.appendChild(this.createPlayer(rightPlayer, 'player-right'));
+            this.container.appendChild(this.createPlayer(bottomPlayer, 'player-bottom'));
+        }
 
-        // P2 bên phải (rotated right)
-        this.container.appendChild(this.createPlayer(rightPlayer, 'player-right'));
-
-        // P1 ở dưới (rotated bottom - always the local player)
-        this.container.appendChild(this.createPlayer(bottomPlayer, 'player-bottom'));
+        const isMyTurn = this.gameState.currentPlayerIndex === localIdx;
+        const turnStatusText = (playersCount === 2) ? (isMyTurn ? "YOUR TURN" : "AI TURN") : (isMyTurn ? "LƯỢT CỦA BẠN" : `LƯỢT CỦA ${this.gameState.players[this.gameState.currentPlayerIndex].name}`);
+        
+        const turnIndicator = document.createElement('div');
+        turnIndicator.className = 'turn-indicator';
+        turnIndicator.textContent = turnStatusText;
+        turnIndicator.style.cssText = `
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: ${isMyTurn ? '#10b981' : '#fbbf24'};
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid ${isMyTurn ? '#10b981' : '#fbbf24'};
+            z-index: 100;
+        `;
+        this.container.appendChild(turnIndicator);
 
         this.bindEvents();
     }
@@ -95,21 +118,24 @@ export class Renderer {
         // 2. Member seats & connection details
         const seatsCard = document.createElement('div');
         seatsCard.className = 'sidebar-card seats-card';
-        let seatsHtml = '<h3>Danh sách ghế</h3>';
+        const playersCount = this.gameState.modeConfig ? this.gameState.modeConfig.players : 4;
+        const modeName = this.gameState.modeConfig ? this.gameState.modeConfig.name : 'Online 4 Người';
+        
+        let seatsHtml = `<h3>Thành viên (${modeName})</h3>`;
         const assignments = this.gameState.playerAssignments || {};
         const assignedIndexes = Object.values(assignments);
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < playersCount; i++) {
             const isAssigned = assignedIndexes.includes(i);
             const name = this.gameState.players[i].name || `Người chơi ${i + 1}`;
 
             // Mark host and local player
             let suffix = '';
-            if (this.gameState.hostPlayerIndex === i) {
-                suffix += ' 👑'; // Host crown icon
+            if (i === this.gameState.hostPlayerIndex) {
+                suffix += ' <span style="font-size: 10px; color: #fbbf24; border: 1px solid #fbbf24; padding: 1px 4px; border-radius: 4px; margin-left: 4px;">Host</span>';
             }
-            if (this.network.localPlayerIndex === i) {
-                suffix += ' (Bạn)';
+            if (this.isOwnedPlayer(i)) {
+                suffix += ' <span style="font-size: 10px; color: #10b981; border: 1px solid #10b981; padding: 1px 4px; border-radius: 4px; margin-left: 4px;">Bạn</span>';
             }
 
             seatsHtml += `
@@ -191,37 +217,6 @@ export class Renderer {
         return this.network.localPlayerIndex === playerIndex;
     }
 
-    createActionPanel() {
-        const div = document.createElement('div');
-        div.className = 'action-panel';
-
-        const localPlayerIndex = this.network.localPlayerIndex;
-        if (localPlayerIndex === null || localPlayerIndex === undefined) return null;
-
-        if (!this.uiState.hasSelection()) {
-            div.style.visibility = 'hidden';
-            div.innerHTML = `
-                <button disabled>Đánh bài</button>
-                <button disabled>Bỏ chọn</button>
-            `;
-            return div;
-        }
-
-        const isCurrentTurn = this.gameState.currentPlayerIndex === localPlayerIndex;
-        if (!isCurrentTurn) {
-            div.innerHTML = `
-                <button id="play-btn" disabled>Chưa đến lượt</button>
-                <button id="cancel-btn">Bỏ chọn</button>
-            `;
-            return div;
-        }
-
-        div.innerHTML = `
-            <button id="play-btn" ${this.uiState.canPlay() ? '' : 'disabled'}>Đánh bài</button>
-            <button id="cancel-btn">Bỏ chọn</button>
-        `;
-        return div;
-    }
 
     createSecretCardSlot(player, isOwned) {
         const div = document.createElement('div');
@@ -320,12 +315,14 @@ export class Renderer {
         } else {
             // Render local player hand normally
             const info = document.createElement('div');
-            info.className = 'player-info';
+            info.className = 'player-info local-player-info';
             info.innerHTML = `
-                <strong>${player.name || 'Người chơi ' + player.id} (Bạn)</strong>
-                <span style="color: #fbbf24; font-weight: bold; font-size: 11px;">💰 ${this.formatMoney(player.money)} VNĐ</span><br>
-                <span style="font-size: 11px;">Số bài: ${player.hand.length} lá | Đã ăn: ${player.capturedCards.length} lá | Điểm: ${player.score}</span>
-                <div class="captured-preview">
+                <div class="info-left">
+                    <strong>${player.name || 'Người chơi ' + player.id} (Bạn)</strong>
+                    <span style="color: #fbbf24; font-weight: bold; font-size: 11px;">💰 ${this.formatMoney(player.money)} VNĐ</span><br>
+                    <span style="font-size: 11px;">Số bài: ${player.hand.length} lá | Đã ăn: ${player.capturedCards.length} lá | Điểm: ${player.score}</span>
+                </div>
+                <div class="captured-preview info-right">
                     ${capturedHtml}
                 </div>
             `;
@@ -344,13 +341,32 @@ export class Renderer {
                 hand.appendChild(this.createSecretCardSlot(player, true));
             }
 
-            div.appendChild(hand);
+            const wrapper = document.createElement('div');
+            wrapper.className = 'hand-action-wrapper';
 
-            // Render Action Panel right below local player's hand
-            const actionPanel = this.createActionPanel();
-            if (actionPanel) {
-                div.appendChild(actionPanel);
+            const cancelBtn = document.createElement('button');
+            cancelBtn.id = 'cancel-btn';
+            cancelBtn.textContent = 'Bỏ chọn';
+
+            const playBtn = document.createElement('button');
+            playBtn.id = 'play-btn';
+            playBtn.textContent = 'Đánh bài';
+
+            if (!this.uiState.hasSelection()) {
+                cancelBtn.disabled = true;
+                playBtn.disabled = true;
+            } else if (this.gameState.currentPlayerIndex !== pIndex) {
+                playBtn.disabled = true;
+                playBtn.textContent = 'Chưa đến lượt';
+            } else if (!this.uiState.canPlay()) {
+                playBtn.disabled = true;
             }
+
+            wrapper.appendChild(cancelBtn);
+            wrapper.appendChild(hand);
+            wrapper.appendChild(playBtn);
+
+            div.appendChild(wrapper);
         }
 
         const actionZone = document.createElement('div');
@@ -419,7 +435,7 @@ export class Renderer {
         } else if (!isHandCard) {
             div.dataset.type = 'table';
             if (this.uiState.capturableTableCardIds.includes(card.id)) {
-                div.classList.add('card-selectable');
+                div.classList.add('card-eatable');
             }
             if (this.uiState.selectedTableCardId === card.id) {
                 div.classList.add('table-card-selected');
@@ -445,7 +461,7 @@ export class Renderer {
     }
 
     bindEvents() {
-        const cards = this.container.querySelectorAll('.card-selectable');
+        const cards = this.container.querySelectorAll('.card-selectable, .card-eatable');
         cards.forEach(card => {
             card.addEventListener('click', () => {
                 const localPlayerIndex = this.network.localPlayerIndex;
@@ -635,6 +651,12 @@ export class Renderer {
         const localIdx = this.network.localPlayerIndex !== null && this.network.localPlayerIndex !== undefined
             ? this.network.localPlayerIndex
             : 0;
+        
+        const playersCount = this.gameState.modeConfig ? this.gameState.modeConfig.players : 4;
+        if (playersCount === 2) {
+            return idx === localIdx ? 'player-bottom' : 'player-top';
+        }
+
         const rel = (idx - localIdx + 4) % 4;
         const classes = ['player-bottom', 'player-right', 'player-top', 'player-left'];
         return classes[rel] || 'player-bottom';
@@ -673,6 +695,11 @@ export class Renderer {
         const suit = suitMap[suitChar] || 'H';
         const isRed = suit === 'H' || suit === 'D';
         return { rank, suit, isRed };
+    }
+
+    parseCardsString(str) {
+        if (!str) return [];
+        return str.split(',').map(s => this.parseCardString(s.trim())).filter(c => c !== null);
     }
 
     playDealAnimation(onComplete) {
@@ -749,7 +776,7 @@ export class Renderer {
                 setTimeout(() => {
                     promises.push(animateSingleDeal(pRect));
                 }, delay);
-                delay += 40;
+                delay += 150; // Tăng delay lên 150ms mỗi lá
             }
         }
 
@@ -758,7 +785,7 @@ export class Renderer {
             setTimeout(() => {
                 promises.push(animateSingleDeal(tableRect, true, i));
             }, delay);
-            delay += 40;
+            delay += 150; // Tăng delay lên 150ms mỗi lá
         }
 
         setTimeout(() => {
@@ -855,108 +882,162 @@ export class Renderer {
             }
 
             const actionZone = seatEl.querySelector('.action-zone');
-            const primarySlot = actionZone.querySelector('.primary-slot');
-            const secondarySlot = actionZone.querySelector('.secondary-slot');
-            const primarySlotRect = primarySlot.getBoundingClientRect();
-            const secondarySlotRect = secondarySlot.getBoundingClientRect();
+            const primarySlot = actionZone ? actionZone.querySelector('.primary-slot') : null;
+            const secondarySlot = actionZone ? actionZone.querySelector('.secondary-slot') : null;
+            
+            const primarySlotRect = primarySlot ? primarySlot.getBoundingClientRect() : tableRect;
+            const secondarySlotRect = secondarySlot ? secondarySlot.getBoundingClientRect() : tableRect;
 
-            await animateFlight(playedCard, startRect, primarySlotRect, false, 600);
-            primarySlot.innerHTML = this.createCard(playedCard).innerHTML;
-            primarySlot.className = `action-slot primary-slot card ${playedCard.isRed ? 'red' : 'black'} has-card`;
+            // Bước 2: Lá bài từ tay bay tới Play Preview Zone
+            await animateFlight(playedCard, startRect, primarySlotRect, false, 500);
+            if (primarySlot) {
+                primarySlot.innerHTML = this.createCard(playedCard).innerHTML;
+                primarySlot.className = `action-slot primary-slot card ${playedCard.isRed ? 'red' : 'black'} has-card`;
+            }
+
+            // Bước 3: Dừng tại đây 300ms
+            await new Promise(r => setTimeout(r, 300));
 
             if (action.captured) {
-                const capturedCard = this.parseCardString(action.captured);
+                // TRƯỜNG HỢP B: ĂN ĐƯỢC
+                await new Promise(r => setTimeout(r, 300)); // Thêm 300ms sau khi dừng
 
-                let capturedRect = tableRect;
-                const tableCards = tableEl.querySelectorAll('.card');
-                let targetEl = null;
-                for (let el of tableCards) {
-                    if (el.textContent.includes(capturedCard.rank)) {
-                        capturedRect = el.getBoundingClientRect();
-                        targetEl = el;
-                        break;
+                const capturedCards = this.parseCardsString(action.captured);
+                let targetEls = [];
+                let capturedRects = [];
+                const tableCards = Array.from(tableEl.querySelectorAll('.card'));
+                
+                capturedCards.forEach(cc => {
+                    for (let el of tableCards) {
+                        if (el.textContent.includes(cc.rank) && !targetEls.includes(el)) {
+                            targetEls.push(el);
+                            capturedRects.push(el.getBoundingClientRect());
+                            break;
+                        }
+                    }
+                });
+
+                // Bay lần lượt từng lá bài bị ăn vào ô nét đứt bên phải
+                for (let i = 0; i < capturedCards.length; i++) {
+                    const cc = capturedCards[i];
+                    const targetEl = targetEls[i];
+                    const rect = capturedRects[i] || tableRect;
+
+                    if (targetEl) {
+                        targetEl.classList.add('flash-capture');
+                        await new Promise(r => setTimeout(r, 500)); // Nháy sáng 500ms
+                        targetEl.style.opacity = '0';
+                    }
+
+                    await animateFlight(cc, rect, secondarySlotRect, false, 500); // Bay tới Capture Preview Zone 500ms
+                    if (secondarySlot) {
+                        secondarySlot.innerHTML = this.createCard(cc).innerHTML;
+                        secondarySlot.className = `action-slot secondary-slot card ${cc.isRed ? 'red' : 'black'} has-card`;
                     }
                 }
 
-                if (targetEl) {
-                    targetEl.classList.add('flash-capture');
-                    await new Promise(r => setTimeout(r, 600));
-                    targetEl.style.opacity = '0';
-                }
+                // Bay về khu vực bài ăn 600ms
+                const sweeps = [
+                    animateFlight(playedCard, primarySlotRect, seatRect, true, 600)
+                ];
+                capturedCards.forEach(cc => {
+                    sweeps.push(animateFlight(cc, secondarySlotRect, seatRect, true, 600));
+                });
+                await Promise.all(sweeps);
 
-                await animateFlight(capturedCard, capturedRect, secondarySlotRect, false, 600);
-                secondarySlot.innerHTML = this.createCard(capturedCard).innerHTML;
-                secondarySlot.className = `action-slot secondary-slot card ${capturedCard.isRed ? 'red' : 'black'} has-card`;
-
-                await new Promise(r => setTimeout(r, 800));
-
-                await Promise.all([
-                    animateFlight(playedCard, primarySlotRect, seatRect, true, 600),
-                    animateFlight(capturedCard, secondarySlotRect, seatRect, true, 600)
-                ]);
+                await new Promise(r => setTimeout(r, 1200)); // Nghỉ 1200ms
             } else {
-                await new Promise(r => setTimeout(r, 800));
-                await animateFlight(playedCard, primarySlotRect, tableRect, true, 600);
+                // TRƯỜNG HỢP A: KHÔNG ĂN ĐƯỢC
+                await new Promise(r => setTimeout(r, 300));
+                await animateFlight(playedCard, primarySlotRect, tableRect, true, 500);
+                await new Promise(r => setTimeout(r, 500)); // Nghỉ 500ms trước khi thực hiện logic QUE
             }
 
-            primarySlot.innerHTML = '';
-            primarySlot.className = 'action-slot primary-slot';
-            secondarySlot.innerHTML = '';
-            secondarySlot.className = 'action-slot secondary-slot';
+            if (primarySlot) {
+                primarySlot.innerHTML = '';
+                primarySlot.className = 'action-slot primary-slot';
+            }
+            if (secondarySlot) {
+                secondarySlot.innerHTML = '';
+                secondarySlot.className = 'action-slot secondary-slot';
+            }
         }
 
-        // 2. Draw card animation
+        // PHẦN 2: BỐC QUE
         if (action.drawn) {
             const drawnCard = this.parseCardString(action.drawn);
             const actionZone = seatEl.querySelector('.action-zone');
-            const primarySlot = actionZone.querySelector('.primary-slot');
-            const secondarySlot = actionZone.querySelector('.secondary-slot');
-            const primarySlotRect = primarySlot.getBoundingClientRect();
-            const secondarySlotRect = secondarySlot.getBoundingClientRect();
+            const primarySlot = actionZone ? actionZone.querySelector('.primary-slot') : null;
+            const secondarySlot = actionZone ? actionZone.querySelector('.secondary-slot') : null;
+            const primarySlotRect = primarySlot ? primarySlot.getBoundingClientRect() : tableRect;
+            const secondarySlotRect = secondarySlot ? secondarySlot.getBoundingClientRect() : tableRect;
 
-            await animateFlight(drawnCard, nocRect, primarySlotRect, false, 600);
-            primarySlot.innerHTML = this.createCard(drawnCard).innerHTML;
-            primarySlot.className = `action-slot primary-slot card ${drawnCard.isRed ? 'red' : 'black'} has-card`;
+            // Lá trên cùng của QUE bay tới Play Preview Zone
+            await animateFlight(drawnCard, nocRect, primarySlotRect, false, 500);
+            if (primarySlot) {
+                primarySlot.innerHTML = this.createCard(drawnCard).innerHTML;
+                primarySlot.className = `action-slot primary-slot card ${drawnCard.isRed ? 'red' : 'black'} has-card`;
+            }
+
+            // Dừng 300ms
+            await new Promise(r => setTimeout(r, 300));
 
             if (action.autoCaptured) {
-                const autoCapturedCard = this.parseCardString(action.autoCaptured);
+                const autoCapturedCards = this.parseCardsString(action.autoCaptured);
+                let targetEls = [];
+                let capturedRects = [];
+                const tableCards = Array.from(tableEl.querySelectorAll('.card'));
+                
+                autoCapturedCards.forEach(cc => {
+                    for (let el of tableCards) {
+                        if (el.textContent.includes(cc.rank) && !targetEls.includes(el)) {
+                            targetEls.push(el);
+                            capturedRects.push(el.getBoundingClientRect());
+                            break;
+                        }
+                    }
+                });
 
-                let capturedRect = tableRect;
-                const tableCards = tableEl.querySelectorAll('.card');
-                let targetEl = null;
-                for (let el of tableCards) {
-                    if (el.textContent.includes(autoCapturedCard.rank)) {
-                        capturedRect = el.getBoundingClientRect();
-                        targetEl = el;
-                        break;
+                // Bay lần lượt từng lá bài bị ăn vào ô nét đứt bên phải
+                for (let i = 0; i < autoCapturedCards.length; i++) {
+                    const cc = autoCapturedCards[i];
+                    const targetEl = targetEls[i];
+                    const rect = capturedRects[i] || tableRect;
+
+                    if (targetEl) {
+                        targetEl.classList.add('flash-capture');
+                        await new Promise(r => setTimeout(r, 500));
+                        targetEl.style.opacity = '0';
+                    }
+
+                    await animateFlight(cc, rect, secondarySlotRect, false, 500);
+                    if (secondarySlot) {
+                        secondarySlot.innerHTML = this.createCard(cc).innerHTML;
+                        secondarySlot.className = `action-slot secondary-slot card ${cc.isRed ? 'red' : 'black'} has-card`;
                     }
                 }
 
-                if (targetEl) {
-                    targetEl.classList.add('flash-capture');
-                    await new Promise(r => setTimeout(r, 600));
-                    targetEl.style.opacity = '0';
-                }
-
-                await animateFlight(autoCapturedCard, capturedRect, secondarySlotRect, false, 600);
-                secondarySlot.innerHTML = this.createCard(autoCapturedCard).innerHTML;
-                secondarySlot.className = `action-slot secondary-slot card ${autoCapturedCard.isRed ? 'red' : 'black'} has-card`;
-
-                await new Promise(r => setTimeout(r, 800));
-
-                await Promise.all([
-                    animateFlight(drawnCard, primarySlotRect, seatRect, true, 600),
-                    animateFlight(autoCapturedCard, secondarySlotRect, seatRect, true, 600)
-                ]);
+                // Cả 2 cùng bay về
+                const sweeps = [
+                    animateFlight(drawnCard, primarySlotRect, seatRect, true, 600)
+                ];
+                autoCapturedCards.forEach(cc => {
+                    sweeps.push(animateFlight(cc, secondarySlotRect, seatRect, true, 600));
+                });
+                await Promise.all(sweeps);
             } else {
-                await new Promise(r => setTimeout(r, 800));
-                await animateFlight(drawnCard, primarySlotRect, tableRect, true, 600);
+                // Không ăn được
+                await animateFlight(drawnCard, primarySlotRect, tableRect, true, 500);
             }
 
-            primarySlot.innerHTML = '';
-            primarySlot.className = 'action-slot primary-slot';
-            secondarySlot.innerHTML = '';
-            secondarySlot.className = 'action-slot secondary-slot';
+            if (primarySlot) {
+                primarySlot.innerHTML = '';
+                primarySlot.className = 'action-slot primary-slot';
+            }
+            if (secondarySlot) {
+                secondarySlot.innerHTML = '';
+                secondarySlot.className = 'action-slot secondary-slot';
+            }
         }
 
         onComplete();

@@ -1,14 +1,20 @@
 export class NetworkManager {
     constructor(onStateUpdateCallback) {
-        this.socket = io();
+        this.socket = io({ autoConnect: false });
         this.connected = false;
         this.socketId = null;
         this.clientsCount = 0;
         this.lastSync = '---';
         this.localPlayerIndex = null;
         this.onStateUpdateCallback = onStateUpdateCallback;
+        this.username = null;
 
         this.bindEvents();
+    }
+
+    connect(username) {
+        this.username = username;
+        this.socket.connect();
     }
 
     bindEvents() {
@@ -17,8 +23,19 @@ export class NetworkManager {
             this.socketId = this.socket.id;
             this.updateUI();
             
-            // YÊU CẦU 7: Request GameState on connect
-            this.socket.emit('requestGameState');
+            // Auto join game with username
+            if (this.username) {
+                this.socket.emit('joinGame', { name: this.username });
+            }
+        });
+
+        this.socket.on('joinError', (msg) => {
+            this.socket.disconnect();
+            const errEl = document.getElementById('mode-error');
+            if(errEl) {
+                errEl.textContent = msg;
+                errEl.style.display = 'block';
+            }
         });
 
         this.socket.on('disconnect', () => {
@@ -66,15 +83,7 @@ export class NetworkManager {
             });
         }
 
-        // Handle join button
-        const joinBtn = document.getElementById('join-game-btn');
-        if (joinBtn) {
-            joinBtn.addEventListener('click', () => {
-                const nameInput = document.getElementById('player-name');
-                const name = nameInput ? nameInput.value : '';
-                this.socket.emit('joinGame', { name: name.trim() });
-            });
-        }
+        // joinBtn logic removed, automated in connect()
     }
 
     updateUI() {
@@ -115,13 +124,7 @@ export class NetworkManager {
             }
         }
 
-        if (joinSection) {
-            if (this.localPlayerIndex !== null && this.localPlayerIndex !== undefined) {
-                joinSection.style.display = 'none';
-            } else {
-                joinSection.style.display = 'flex';
-            }
-        }
+        // joinSection logic removed
 
         if (resetBtn) {
             const state = window.currentGameState;

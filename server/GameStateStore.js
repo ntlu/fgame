@@ -128,13 +128,8 @@ class GameStateStore {
     }
 
     calculateSecretCardBonus(card) {
-        if (!card || !card.isRed) return 0;
-        const rank = card.rank;
-        if (rank === 'A') return 20;
-        if (['9', '10', 'J', 'Q', 'K'].includes(rank)) return 10;
-        const val = parseInt(rank, 10);
-        if (!isNaN(val) && val >= 2 && val <= 8) return val;
-        return 0;
+        if (!card) return 0;
+        return RuleEngine.calculateCardScore(card);
     }
 
     processTurn(handCardId, tableCardId) {
@@ -156,7 +151,7 @@ class GameStateStore {
                 return false;
             }
 
-            const tableCardIndex = tableCardId ? this.gameState.tableCards.findIndex(c => c.id === tableCardId) : null;
+            const tableCardIndex = tableCardId ? this.gameState.tableCards.findIndex(c => c && c.id === tableCardId) : null;
 
             // Process Play
             const playResult = this.turnEngine.processPlay(playerIndex, handCardIndex, tableCardIndex);
@@ -167,8 +162,10 @@ class GameStateStore {
 
             this.addLog(`${playerName} đã đánh ${getCardStr(playResult.playedCard)}`);
             if (playResult.captured) {
-                this.addLog(`${playerName} ăn ${getCardStr(playResult.tableCard)}`);
-                this.gameState.lastAction = `Đã đánh: ${getCardStr(playResult.playedCard)}\nĐã ăn: ${getCardStr(playResult.tableCard)}`;
+                const capturedCardsArr = Array.isArray(playResult.tableCard) ? playResult.tableCard : [playResult.tableCard];
+                const capturedStrs = capturedCardsArr.map(c => getCardStr(c)).join(', ');
+                this.addLog(`${playerName} ăn ${capturedStrs}`);
+                this.gameState.lastAction = `Đã đánh: ${getCardStr(playResult.playedCard)}\nĐã ăn: ${capturedStrs}`;
             } else {
                 this.addLog(`${playerName} không ăn bài`);
                 this.gameState.lastAction = `Đã đánh: ${getCardStr(playResult.playedCard)}\nKhông ăn bài`;
@@ -179,8 +176,10 @@ class GameStateStore {
             if (drawResult && drawResult.drawnCard) {
                 this.addLog(`${playerName} bốc được ${getCardStr(drawResult.drawnCard)}`);
                 if (drawResult.captured) {
-                    this.addLog(`${playerName} tự động ăn ${getCardStr(drawResult.tableCard)}`);
-                    this.gameState.lastAction += `\nBốc được: ${getCardStr(drawResult.drawnCard)}\nTự động ăn: ${getCardStr(drawResult.tableCard)}`;
+                    const capturedCardsArr = Array.isArray(drawResult.tableCard) ? drawResult.tableCard : [drawResult.tableCard];
+                    const capturedStrs = capturedCardsArr.map(c => getCardStr(c)).join(', ');
+                    this.addLog(`${playerName} tự động ăn ${capturedStrs}`);
+                    this.gameState.lastAction += `\nBốc được: ${getCardStr(drawResult.drawnCard)}\nTự động ăn: ${capturedStrs}`;
                 } else {
                     this.addLog(`${playerName} không ăn bài`);
                     this.gameState.lastAction += `\nBốc được: ${getCardStr(drawResult.drawnCard)}\nKhông ăn bài`;
@@ -191,8 +190,23 @@ class GameStateStore {
             if (this.turnEngine.isRoundFinished()) {
                 this.gameState.secretCardRevealed = true;
                 
-                const cardScores = this.turnEngine.calculateRoundScores();
                 const ownerIdx = this.gameState.secretCardOwner;
+                
+                // Sweep remaining table cards to secret card owner
+                const remainingTableCards = this.gameState.tableCards.filter(c => c !== null);
+                if (remainingTableCards.length > 0 && ownerIdx !== null && ownerIdx !== undefined) {
+                    const owner = this.gameState.players[ownerIdx];
+                    owner.capturedCards.push(...remainingTableCards);
+                    owner.score = RuleEngine.calculatePlayerScore(owner.capturedCards);
+                    this.gameState.tableCards = this.gameState.tableCards.map(c => null);
+                    
+                    const suitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
+                    const getCardStr = (c) => `${c.rank}${suitMap[c.suit]}`;
+                    const sweptStrs = remainingTableCards.map(c => getCardStr(c)).join(', ');
+                    this.addLog(`[Vét Bàn] Người giữ lá Bí Mật (${owner.name || 'Người chơi ' + (owner.id)}) ăn bài còn lại trên bàn: ${sweptStrs}`);
+                }
+
+                const cardScores = this.turnEngine.calculateRoundScores();
                 const secretCard = this.gameState.secretCard;
                 const bonus = this.calculateSecretCardBonus(secretCard);
                 this.gameState.secretCardBonus = bonus;
@@ -203,8 +217,9 @@ class GameStateStore {
                     adjustedScores[ownerIdx] += bonus;
                 }
 
-                // 2. Check double condition on adjusted score (>= 90 points triggers X2)
-                const hasDouble = adjustedScores.some(score => score >= 90);
+                // 2. Check double condition on adjusted score (>= x2Threshold points triggers X2)
+                const config = this.gameState.modeConfig || { breakEvenScore: 55, x2Threshold: 90, players: 4 };
+                const hasDouble = adjustedScores.some(score => score >= config.x2Threshold);
                 if (this.gameState.totalRoundsPlayed === undefined) this.gameState.totalRoundsPlayed = 0;
                 if (this.gameState.doubleRoundsCount === undefined) this.gameState.doubleRoundsCount = 0;
 
@@ -215,10 +230,11 @@ class GameStateStore {
 
                 // 3. Zero-sum Settlement with multiplier
                 const multiplier = hasDouble ? 2 : 1;
+                const playersCount = config.players;
                 const settlement = adjustedScores.map((score, idx) => {
-                    const baseProfit = score - 55;
+                    const baseProfit = score - config.breakEvenScore;
                     if (idx === ownerIdx) {
-                        return (baseProfit + bonus * 2) * multiplier;
+                        return (baseProfit + bonus * (playersCount - 1)) * multiplier;
                     } else {
                         return (baseProfit - bonus) * multiplier;
                     }

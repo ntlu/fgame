@@ -1,14 +1,31 @@
 export class GameState {
-    constructor() {
+    constructor(modeConfig) {
+        // Fallback to ONLINE_4 if no config provided (for backward compatibility)
+        this.modeConfig = modeConfig || {
+            id: 'ONLINE_4',
+            name: 'Online 4 Người',
+            players: 4,
+            cardsPerPlayer: 5,
+            breakEvenScore: 55,
+            x2Threshold: 90
+        };
+
         this.round = 1;
         this.dealerIndex = 0;
         this.currentPlayerIndex = 0;
-        this.players = [
-            { id: 1, hand: [], capturedCards: [], score: 0, name: 'Người chơi 1', accumulatedScore: 0, money: 10000000 },
-            { id: 2, hand: [], capturedCards: [], score: 0, name: 'Người chơi 2', accumulatedScore: 0, money: 10000000 },
-            { id: 3, hand: [], capturedCards: [], score: 0, name: 'Người chơi 3', accumulatedScore: 0, money: 10000000 },
-            { id: 4, hand: [], capturedCards: [], score: 0, name: 'Người chơi 4', accumulatedScore: 0, money: 10000000 }
-        ];
+        
+        this.players = [];
+        for (let i = 0; i < this.modeConfig.players; i++) {
+            this.players.push({ 
+                id: i + 1, 
+                hand: [], 
+                capturedCards: [], 
+                score: 0, 
+                name: `Người chơi ${i + 1}`, 
+                accumulatedScore: 0, 
+                money: 10000000 
+            });
+        }
         this.tableCards = [];
         this.deck = [];
         
