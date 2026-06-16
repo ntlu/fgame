@@ -423,6 +423,7 @@ body.sidebar-open .container {
     font-size: 16px;
     user-select: none;
     position: relative;
+    overflow: hidden;
     transition: transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -430,6 +431,10 @@ body.sidebar-open .container {
     background: rgba(31, 41, 55, 0.4);
     border: 2px dashed rgba(75, 85, 99, 0.6);
     box-shadow: none;
+}
+
+.deal-hidden {
+    visibility: hidden !important;
 }
 
 .card.red {
@@ -441,7 +446,8 @@ body.sidebar-open .container {
 }
 
 .card-center {
-    font-size: 24px;
+    font-size: 20px;
+    line-height: 1;
     text-align: center;
     flex-grow: 1;
     display: flex;
@@ -450,11 +456,13 @@ body.sidebar-open .container {
 }
 
 .card-top {
+    font-size: 14px;
     align-self: flex-start;
     line-height: 1;
 }
 
 .card-bottom {
+    font-size: 14px;
     align-self: flex-end;
     transform: rotate(180deg);
     line-height: 1;
@@ -525,7 +533,7 @@ body.sidebar-open .container {
 
 .card-eatable {
     cursor: pointer;
-    border: 2px solid #ef4444;
+    border: 4px solid #55ef55;
     box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
 }
 
@@ -535,7 +543,7 @@ body.sidebar-open .container {
 }
 
 .table-card-selected {
-    border: 2px solid #fbbf24;
+    border: 3px solid #fbbf24;
     transform: scale(1.1) !important;
     box-shadow: 0 5px 15px rgba(251, 191, 36, 0.6) !important;
     z-index: 10;
@@ -688,11 +696,11 @@ body.sidebar-open .container {
 }
 
 .mini-card {
-    width: 18px;
+    width: 24px;
     height: 20px;
     background: white;
     border-radius: 3px;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: bold;
     display: flex;
     align-items: center;
@@ -822,9 +830,9 @@ body.sidebar-open .container {
 }
 
 .action-slot.has-card {
-    border: 2px solid #dc2626;
-    background: transparent;
-    box-shadow: none;
+    border: none;
+    background: white;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
 }
 
 /* Responsive Overrides */
@@ -855,7 +863,8 @@ body.sidebar-open .container {
     }
 
     .card-center {
-        font-size: 18px;
+        font-size: 20px;
+        line-height: 1;
     }
 
     .noc-card {
@@ -952,7 +961,8 @@ body.sidebar-open .container {
     }
 
     .card-center {
-        font-size: 16px;
+        font-size: 22px;
+        line-height: 1;
     }
 
     .card-back {

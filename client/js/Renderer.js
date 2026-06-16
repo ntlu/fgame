@@ -8,6 +8,7 @@ export class Renderer {
         this.previousState = null;
         this.animationQueue = [];
         this.isAnimating = false;
+        this.isDealingRound = false;
     }
 
     formatMoney(amount) {
@@ -98,8 +99,10 @@ export class Renderer {
 
         if (!this.previousState || this.previousState.round !== this.gameState.round) {
             // First render or new round: render immediately, then play deal animation
+            this.isDealingRound = true;
             this.render();
             this.playDealAnimation(() => {
+                this.isDealingRound = false;
                 this.previousState = structuredClone(this.gameState);
                 this.isAnimating = false;
                 this.processAnimationQueue();
@@ -328,9 +331,13 @@ export class Renderer {
             // Single representative card back showing the count
             const repCard = document.createElement('div');
             repCard.className = 'representative-card';
+            if (this.isDealingRound) {
+                repCard.classList.add('deal-hidden');
+            }
+            const count = this.isDealingRound ? 0 : player.hand.length;
             repCard.innerHTML = `
                 <div class="card card-back"><div class="pattern">🂠</div></div>
-                <div class="card-count-badge">${player.hand.length}</div>
+                <div class="card-count-badge">${count}</div>
             `;
             hand.appendChild(repCard);
 
@@ -461,6 +468,10 @@ export class Renderer {
         const div = document.createElement('div');
         div.className = `card ${card.isRed ? 'red' : 'black'}`;
         div.dataset.cardId = card.id;
+
+        if (this.isDealingRound) {
+            div.classList.add('deal-hidden');
+        }
 
         if (isHandCard && isPlayer1) {
             div.classList.add('card-selectable');
@@ -666,6 +677,13 @@ export class Renderer {
                 : profit * 1000;
             const moneyChangeSign = moneyChangeVal > 0 ? '+' : '';
 
+            // Render all captured cards
+            const capturedHtml = (p.capturedCards || []).map(c => {
+                const suitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
+                const isRed = c.suit === 'H' || c.suit === 'D';
+                return `<div class="mini-card ${isRed ? 'red' : 'black'}">${c.rank}${suitMap[c.suit]}</div>`;
+            }).join('');
+
             html += `
                 <div class="player-result ${isWinner ? 'is-winner' : ''}" style="min-width: 190px; text-align: left;">
                     <strong style="color: #fbbf24; font-size: 15px;">${pName}</strong><br>
@@ -679,6 +697,9 @@ export class Renderer {
                         <div>• Money: <span class="${moneyChangeVal >= 0 ? 'profit-pos' : 'profit-neg'}"><strong>${moneyChangeSign}${this.formatMoney(moneyChangeVal)}</strong></span></div>
                         <div style="border-top: 1px dashed rgba(255,255,255,0.15); margin: 4px 0; padding-top: 4px;">
                             • Balance: <strong style="color: #10b981;">${this.formatMoney(p.money)}</strong>
+                        </div>
+                        <div style="border-top: 1px dashed rgba(255,255,255,0.15); margin: 4px 0; padding-top: 4px;">
+                            • Đã ăn: <div class="captured-preview" style="margin-top: 4px; gap: 2px;">${capturedHtml || '<span style="color:#6b7280;font-size:10px;">(Không có)</span>'}</div>
                         </div>
                     </div>
                 </div>
@@ -773,14 +794,6 @@ export class Renderer {
         }
 
         const nocRect = nocEl.getBoundingClientRect();
-        const tableRect = tableEl.getBoundingClientRect();
-
-        const seatRects = [];
-        for (let i = 0; i < this.gameState.players.length; i++) {
-            const cls = this.getPositionClassForIndex(i);
-            const el = document.querySelector('.' + cls);
-            seatRects.push(el ? el.getBoundingClientRect() : tableRect);
-        }
 
         let animLayer = document.getElementById('animation-layer');
         if (!animLayer) {
@@ -789,8 +802,11 @@ export class Renderer {
             document.body.appendChild(animLayer);
         }
 
-        const animateSingleDeal = (targetRect, isTable = false, index = 0) => {
+        const animateSingleDeal = (targetEl) => {
             return new Promise(resolve => {
+                if (!targetEl) { resolve(); return; }
+                const targetRect = targetEl.getBoundingClientRect();
+
                 const cardDiv = document.createElement('div');
                 cardDiv.className = 'card card-back floating-anim-card';
                 cardDiv.style.position = 'fixed';
@@ -807,23 +823,21 @@ export class Renderer {
 
                 cardDiv.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease';
 
-                let xOffset = 0;
-                let yOffset = 0;
-                if (isTable) {
-                    const cols = 6;
-                    const colIdx = index % cols;
-                    const rowIdx = Math.floor(index / cols);
-                    xOffset = colIdx * 50 - 100;
-                    yOffset = rowIdx * 70 - 35;
-                }
-
-                const targetX = targetRect.left + (targetRect.width / 2) - 28 + xOffset;
-                const targetY = targetRect.top + (targetRect.height / 2) - 42 + yOffset;
+                const targetX = targetRect.left + (targetRect.width - nocRect.width) / 2;
+                const targetY = targetRect.top + (targetRect.height - nocRect.height) / 2;
 
                 cardDiv.style.transform = `translate(${targetX - nocRect.left}px, ${targetY - nocRect.top}px)`;
 
                 setTimeout(() => {
                     cardDiv.remove();
+                    targetEl.classList.remove('deal-hidden');
+                    
+                    if (targetEl.classList.contains('representative-card')) {
+                        const badge = targetEl.querySelector('.card-count-badge');
+                        if (badge) {
+                            badge.textContent = parseInt(badge.textContent || '0') + 1;
+                        }
+                    }
                     resolve();
                 }, 400);
             });
@@ -833,23 +847,44 @@ export class Renderer {
         let delay = 0;
         const cardsPerPlayer = this.gameState.modeConfig ? this.gameState.modeConfig.cardsPerPlayer : 5;
         
+        const playerTargets = [];
+        for (let p = 0; p < this.gameState.players.length; p++) {
+            const cls = this.getPositionClassForIndex(p);
+            const seatEl = document.querySelector('.' + cls);
+            if (this.isOwnedPlayer(p)) {
+                playerTargets.push(seatEl ? Array.from(seatEl.querySelectorAll('.hand .card:not(.secret-card-slot)')) : []);
+            } else {
+                playerTargets.push(seatEl ? seatEl.querySelector('.representative-card') : null);
+            }
+        }
+        
         // N cards for each player
         for (let round = 0; round < cardsPerPlayer; round++) {
             for (let p = 0; p < this.gameState.players.length; p++) {
-                const pRect = seatRects[p];
-                setTimeout(() => {
-                    promises.push(animateSingleDeal(pRect));
-                }, delay);
-                delay += 150; // Tăng delay lên 150ms mỗi lá
+                const target = playerTargets[p];
+                let targetEl = null;
+                if (Array.isArray(target)) {
+                    targetEl = target[round];
+                } else {
+                    targetEl = target;
+                }
+                
+                if (targetEl) {
+                    setTimeout(() => {
+                        promises.push(animateSingleDeal(targetEl));
+                    }, delay);
+                    delay += 150;
+                }
             }
         }
 
         // 12 cards for table
-        for (let i = 0; i < 12; i++) {
+        const tableCardEls = Array.from(tableEl.querySelectorAll('.card:not(.empty-slot):not(.noc-card)'));
+        for (let i = 0; i < tableCardEls.length; i++) {
             setTimeout(() => {
-                promises.push(animateSingleDeal(tableRect, true, i));
+                promises.push(animateSingleDeal(tableCardEls[i]));
             }, delay);
-            delay += 150; // Tăng delay lên 150ms mỗi lá
+            delay += 150;
         }
 
         setTimeout(() => {
@@ -938,8 +973,10 @@ export class Renderer {
 
             if (activePlayerIndex === this.network.localPlayerIndex) {
                 const handCards = seatEl.querySelectorAll('.hand .card');
+                const revSuitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
+                const sym = revSuitMap[playedCard.suit] || '';
                 for (let el of handCards) {
-                    if (el.textContent.includes(playedCard.rank)) {
+                    if (el.textContent.includes(playedCard.rank) && el.textContent.includes(sym)) {
                         startRect = el.getBoundingClientRect();
                         el.style.opacity = '0';
                         break;
@@ -975,10 +1012,12 @@ export class Renderer {
                 let targetEls = [];
                 let capturedRects = [];
                 const tableCards = Array.from(tableEl.querySelectorAll('.card'));
+                const revSuitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
                 
                 capturedCards.forEach(cc => {
+                    const sym = revSuitMap[cc.suit] || '';
                     for (let el of tableCards) {
-                        if (el.textContent.includes(cc.rank) && !targetEls.includes(el)) {
+                        if (el.textContent.includes(cc.rank) && el.textContent.includes(sym) && !targetEls.includes(el)) {
                             targetEls.push(el);
                             capturedRects.push(el.getBoundingClientRect());
                             break;
@@ -1076,10 +1115,12 @@ export class Renderer {
                 let targetEls = [];
                 let capturedRects = [];
                 const tableCards = Array.from(tableEl.querySelectorAll('.card'));
+                const revSuitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
                 
                 autoCapturedCards.forEach(cc => {
+                    const sym = revSuitMap[cc.suit] || '';
                     for (let el of tableCards) {
-                        if (el.textContent.includes(cc.rank) && !targetEls.includes(el)) {
+                        if (el.textContent.includes(cc.rank) && el.textContent.includes(sym) && !targetEls.includes(el)) {
                             targetEls.push(el);
                             capturedRects.push(el.getBoundingClientRect());
                             break;
