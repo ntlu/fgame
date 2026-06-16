@@ -12,8 +12,9 @@ export class NetworkManager {
         this.bindEvents();
     }
 
-    connect(username) {
+    connect(username, mode) {
         this.username = username;
+        this.mode = mode || 'ONLINE_4';
         this.socket.connect();
     }
 
@@ -23,9 +24,9 @@ export class NetworkManager {
             this.socketId = this.socket.id;
             this.updateUI();
             
-            // Auto join game with username
+            // Auto join game with username and mode
             if (this.username) {
-                this.socket.emit('joinGame', { name: this.username });
+                this.socket.emit('joinGame', { name: this.username, mode: this.mode });
             }
         });
 

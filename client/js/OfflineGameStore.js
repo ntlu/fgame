@@ -5,8 +5,9 @@ import { RuleEngine } from '/shared/RuleEngine.js';
 import { GameModes } from '/shared/config/GameModes.js';
 
 export class OfflineGameStore {
-    constructor(onStateUpdateCallback) {
-        this.gameState = new GameState(GameModes.OFFLINE_2);
+    constructor(onStateUpdateCallback, modeId = 'OFFLINE_2') {
+        const modeConfig = GameModes[modeId] || GameModes['OFFLINE_2'];
+        this.gameState = new GameState(modeConfig);
         this.gameState.version = 1;
         this.gameManager = new GameManager(this.gameState);
         this.turnEngine = new TurnEngine(this.gameState);
@@ -45,12 +46,13 @@ export class OfflineGameStore {
                 delete stateCopy.deck;
             }
 
-            // Hide AI's hand from User by mocking it, though User is localIdx 0.
-            // AI is localIdx 1.
-            stateCopy.players[1].hand = Array.from({ length: stateCopy.players[1].hand.length }, () => ({}));
+            // Hide all AI hands from User
+            for (let i = 1; i < stateCopy.players.length; i++) {
+                stateCopy.players[i].hand = Array.from({ length: stateCopy.players[i].hand.length }, () => ({}));
+            }
 
             // Secret Card: AI is owner. Don't reveal to user.
-            if (!stateCopy.secretCardRevealed && stateCopy.secretCardOwner === 1) {
+            if (!stateCopy.secretCardRevealed && stateCopy.secretCardOwner !== 0 && stateCopy.secretCardOwner !== null) {
                 stateCopy.secretCard = null;
             }
 
@@ -102,6 +104,24 @@ export class OfflineGameStore {
                 this.addLog(`${playerName} không ăn được bài nọc.`);
             }
 
+            let actionText = `Đã đánh: ${getCardStr(playResult.playedCard)}\n`;
+            if (playResult.captured) {
+                const capturedCardsArr = Array.isArray(playResult.tableCard) ? playResult.tableCard : [playResult.tableCard];
+                actionText += `Đã ăn: ${capturedCardsArr.map(getCardStr).join(', ')}\n`;
+            } else {
+                actionText += `Đã ăn: Không ăn bài\n`;
+            }
+
+            actionText += `Bốc được: ${getCardStr(drawResult.drawnCard)}\n`;
+            if (drawResult.captured) {
+                const capturedCardsArr = Array.isArray(drawResult.tableCard) ? drawResult.tableCard : [drawResult.tableCard];
+                actionText += `Tự động ăn: ${capturedCardsArr.map(getCardStr).join(', ')}`;
+            } else {
+                actionText += `Tự động ăn: Không ăn bài`;
+            }
+
+            this.gameState.lastAction = actionText;
+
             if (this.turnEngine.isRoundFinished()) {
                 this.addLog("--- VÁN BÀI KẾT THÚC ---");
                 this.gameState.secretCardRevealed = true;
@@ -140,7 +160,7 @@ export class OfflineGameStore {
 
                 const multiplier = hasDouble ? 2 : 1;
                 const playersCount = config.players;
-                const settlement = adjustedScores.map((score, idx) => {
+                const settlement = cardScores.map((score, idx) => {
                     const baseProfit = score - config.breakEvenScore;
                     if (idx === ownerIdx) {
                         return (baseProfit + bonus * (playersCount - 1)) * multiplier;
@@ -175,10 +195,13 @@ export class OfflineGameStore {
             } else {
                 this.turnEngine.nextTurn();
             }
-
             this.gameState.version++;
+            
             this.broadcastState();
             return true;
+        } catch (error) {
+            console.error("Lỗi khi xử lý lượt đi offline:", error);
+            return false;
         } finally {
             this.processingTurn = false;
         }

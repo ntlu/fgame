@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cauca Project</title>
     <link rel="stylesheet" href="style.css">
     <script>
-        window.addEventListener('error', function(event) {
+        window.addEventListener('error', function (event) {
             const errorDiv = document.createElement('div');
             errorDiv.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; background: red; color: white; padding: 20px; z-index: 9999; font-size: 16px; overflow: auto; max-height: 50vh;';
             errorDiv.innerHTML = `<strong>Error:</strong> ${event.message}<br><small>${event.filename}:${event.lineno}:${event.colno}</small><pre>${event.error ? event.error.stack : ''}</pre>`;
             document.body.appendChild(errorDiv);
         });
-        window.addEventListener('unhandledrejection', function(event) {
+        window.addEventListener('unhandledrejection', function (event) {
             const errorDiv = document.createElement('div');
             errorDiv.style.cssText = 'position: fixed; top: 50vh; left: 0; right: 0; background: orange; color: black; padding: 20px; z-index: 9999; font-size: 16px; overflow: auto; max-height: 50vh;';
             errorDiv.innerHTML = `<strong>Unhandled Promise Rejection:</strong> ${event.reason}<pre>${event.reason && event.reason.stack ? event.reason.stack : ''}</pre>`;
@@ -21,12 +22,14 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <button id="sidebar-toggle" class="sidebar-toggle-btn">☰</button>
-    
+    <button id="leave-game-btn" class="leave-game-btn" style="display: none;">🚪 Thoát</button>
+
     <div id="sidebar" class="sidebar">
-        <h2 class="sidebar-title">Câu Cá LAN</h2>
-        
+        <h2 class="sidebar-title">123</h2>
+
         <!-- Persistent connection panel and controls -->
         <div id="connection-panel">
             <div id="online-details">
@@ -36,18 +39,25 @@
                 <div>Đồng bộ cuối: <span id="last-sync">---</span></div>
                 <div>Bạn là: <span id="local-player-seat">Khán giả</span></div>
             </div>
-            <div id="offline-details" style="display: none; margin-top: 10px; background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 6px;">
+            <div id="offline-details"
+                style="display: none; margin-top: 10px; background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 6px;">
                 <div style="font-weight: bold; color: #3b82f6; margin-bottom: 5px;">Mode: OFFLINE 2P</div>
                 <div>User: <span id="offline-user" style="color: #fbbf24;"></span></div>
                 <div>Opponent: <span style="color: #ef4444;">AI BOT</span></div>
             </div>
-            <div id="user-info-panel" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 10px; background: rgba(30, 41, 59, 0.8); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1);">
-                <div style="font-size: 13px; font-weight: bold;">User: <span id="current-username" style="color: #fbbf24;"></span></div>
-                <button id="logout-btn" style="padding: 4px 8px; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px;">Đăng xuất</button>
+            <div id="user-info-panel"
+                style="display: none; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 10px; background: rgba(30, 41, 59, 0.8); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                <div style="font-size: 13px; font-weight: bold;">User: <span id="current-username"
+                        style="color: #fbbf24;"></span></div>
+                <button id="logout-btn"
+                    style="padding: 4px 8px; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px;">Đăng
+                    xuất</button>
             </div>
-            <button id="reset-game-btn" style="margin-top: 5px; padding: 5px; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">Đặt lại trò chơi</button>
+            <button id="reset-game-btn"
+                style="margin-top: 5px; padding: 5px; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">Đặt
+                lại trò chơi</button>
         </div>
-        
+
         <!-- Dynamic panels placeholder -->
         <div id="sidebar-dynamic-content"></div>
     </div>
@@ -67,7 +77,8 @@
 
     <!-- Mode Selection Screen -->
     <div id="mode-screen" class="screen-overlay" style="display: none;">
-        <div class="mode-container">
+        <div class="mode-container" style="position: relative;">
+            <button id="mode-logout-btn" class="mode-logout-btn">🚪 Đăng xuất</button>
             <h1 class="greeting">Xin chào, <span id="greeting-username"></span>!</h1>
             <h3 class="mode-subtitle">Chọn chế độ chơi</h3>
             <div class="mode-grid">
@@ -76,15 +87,15 @@
                     <h3>Online 4 Người</h3>
                     <p>Chế độ hiện tại. Chơi qua Socket.IO với 4 người thật.</p>
                 </div>
-                <div class="mode-card disabled-mode">
+                <div class="mode-card active-mode" id="mode-online-2">
                     <div class="mode-icon">👥</div>
                     <h3>Online 2 Người</h3>
-                    <p>Coming Soon</p>
+                    <p>Chơi qua Socket.IO với 1 người thật khác.</p>
                 </div>
-                <div class="mode-card disabled-mode">
+                <div class="mode-card active-mode" id="mode-offline-4">
                     <div class="mode-icon">🤖</div>
                     <h3>Offline 4 Người</h3>
-                    <p>1 người + 3 AI. Coming Soon</p>
+                    <p>Chơi 1 mình với 3 người máy (AI).</p>
                 </div>
                 <div class="mode-card active-mode" id="mode-offline-2">
                     <div class="mode-icon">👤</div>
@@ -100,8 +111,9 @@
     <div id="game-screen" class="container" style="display: none;">
         <h1 class="greeting">Đang tải game...</h1>
     </div>
-    
+
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="./js/main.js"></script>
 </body>
+
 </html>

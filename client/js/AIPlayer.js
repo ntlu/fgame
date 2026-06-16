@@ -21,7 +21,7 @@ export class AIPlayer {
         if (gameState.currentPlayerIndex === this.aiIndex) {
             this.turnTimeout = setTimeout(() => {
                 this.chooseMove();
-            }, 800);
+            }, 2500); // Đợi 2.5s để đảm bảo animation của người trước đã chạy xong
         }
     }
 
@@ -34,21 +34,39 @@ export class AIPlayer {
         let bestHandCardId = null;
         let bestTableCardId = null;
 
-        // Simple Heuristic: Eat if possible
+        // Ưu tiên:
+        // 1. Dùng bài (đỏ/đen) để ăn bài Đỏ trên bàn
+        // 2. Dùng bài (đỏ/đen) để ăn bài Đen trên bàn
+        // 3. Đánh rác (chọn bài Đen đánh trước, giữ bài Đỏ lại)
+
+        // Tìm tất cả các cơ hội ăn bài
+        let captureOptions = [];
         for (let card of myPlayer.hand) {
             const capturable = RuleEngine.findCapturableCards(card, realGameState.tableCards);
             if (capturable && capturable.length > 0) {
-                bestHandCardId = card.id;
-                // Just pick the first capturable card
-                bestTableCardId = capturable[0].id;
-                break;
+                capturable.forEach(tCard => {
+                    captureOptions.push({
+                        handCard: card,
+                        tableCard: tCard,
+                        tableIsRed: (tCard.suit === 'H' || tCard.suit === 'D') ? 1 : 0
+                    });
+                });
             }
         }
 
-        // If no capture possible, play a random card
-        if (!bestHandCardId) {
-            const randomIdx = Math.floor(Math.random() * myPlayer.hand.length);
-            bestHandCardId = myPlayer.hand[randomIdx].id;
+        if (captureOptions.length > 0) {
+            // Sắp xếp ưu tiên ăn bài Đỏ trước
+            captureOptions.sort((a, b) => b.tableIsRed - a.tableIsRed);
+            bestHandCardId = captureOptions[0].handCard.id;
+            bestTableCardId = captureOptions[0].tableCard.id;
+        } else {
+            // Không ăn được, đánh rác. Ưu tiên đánh bài đen (giữ bài đỏ).
+            let trashCards = [...myPlayer.hand].sort((a, b) => {
+                const aIsRed = (a.suit === 'H' || a.suit === 'D') ? 1 : 0;
+                const bIsRed = (b.suit === 'H' || b.suit === 'D') ? 1 : 0;
+                return aIsRed - bIsRed; // Đen (0) lên trước Đỏ (1)
+            });
+            bestHandCardId = trashCards[0].id;
             bestTableCardId = null;
         }
 

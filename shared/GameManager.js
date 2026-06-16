@@ -8,8 +8,8 @@ export class GameManager {
     startNewRound() {
         this.gameState.resetForNewRound();
         
-        // Dealer rotation
-        this.gameState.dealerIndex = (this.gameState.round - 1) % this.gameState.modeConfig.players;
+        // Dealer rotation based on total rounds played
+        this.gameState.dealerIndex = (this.gameState.totalRoundsPlayed || 0) % this.gameState.modeConfig.players;
         this.gameState.currentPlayerIndex = this.gameState.dealerIndex;
 
         this.dealCards();

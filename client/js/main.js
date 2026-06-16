@@ -11,7 +11,7 @@ let turnEngine = null;
 let renderer = null;
 let network = null;
 let offlineStore = null;
-let aiPlayer = null;
+let aiPlayers = [];
 
 function init() {
     const loginScreen = document.getElementById('login-screen');
@@ -29,6 +29,11 @@ function init() {
             target.style.display = '';
         }
         
+        const leaveBtn = document.getElementById('leave-game-btn');
+        if (leaveBtn) {
+            leaveBtn.style.display = screenId === 'game-screen' ? 'block' : 'none';
+        }
+
         if (screenId === 'game-screen' && window.innerWidth >= 1200) {
             document.body.classList.add('sidebar-open');
         }
@@ -80,7 +85,29 @@ function init() {
             if(!user) return;
             
             showScreen('game-screen');
-            startGameClient(user);
+            startGameClient(user, 'ONLINE_4');
+        });
+    }
+
+    const modeOnline2 = document.getElementById('mode-online-2');
+    if (modeOnline2) {
+        modeOnline2.addEventListener('click', () => {
+            const user = AuthManager.getCurrentUser();
+            if(!user) return;
+            
+            showScreen('game-screen');
+            startGameClient(user, 'ONLINE_2');
+        });
+    }
+
+    const modeOffline4 = document.getElementById('mode-offline-4');
+    if (modeOffline4) {
+        modeOffline4.addEventListener('click', () => {
+            const user = AuthManager.getCurrentUser();
+            if(!user) return;
+            
+            showScreen('game-screen');
+            startOfflineGame(user, 'OFFLINE_4');
         });
     }
 
@@ -91,20 +118,23 @@ function init() {
             if(!user) return;
             
             showScreen('game-screen');
-            startOfflineGame(user);
+            startOfflineGame(user, 'OFFLINE_2');
         });
     }
 
     const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            AuthManager.logout();
-            if (network) {
-                network.socket.disconnect();
-            }
-            window.location.reload();
-        });
-    }
+    const modeLogoutBtn = document.getElementById('mode-logout-btn');
+    
+    const handleLogout = () => {
+        AuthManager.logout();
+        if (network) {
+            network.socket.disconnect();
+        }
+        window.location.reload();
+    };
+
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+    if (modeLogoutBtn) modeLogoutBtn.addEventListener('click', handleLogout);
 
     const sidebarToggle = document.getElementById('sidebar-toggle');
     if (sidebarToggle) {
@@ -112,9 +142,21 @@ function init() {
             document.body.classList.toggle('sidebar-open');
         });
     }
+
+    const leaveBtn = document.getElementById('leave-game-btn');
+    if (leaveBtn) {
+        leaveBtn.addEventListener('click', () => {
+            if (confirm("Bạn có chắc chắn muốn rời bàn và quay lại sảnh không?")) {
+                if (network) {
+                    network.socket.disconnect();
+                }
+                window.location.reload();
+            }
+        });
+    }
 }
 
-function startGameClient(user) {
+function startGameClient(user, mode = 'ONLINE_4') {
     if (network) return;
 
     const uiState = new UIState();
@@ -131,15 +173,13 @@ function startGameClient(user) {
 
         if (!renderer) {
             renderer = new Renderer(currentGameState, uiState, turnEngine, network);
-        } else {
-            renderer.gameState = currentGameState;
         }
         
         uiState.clearSelection(); 
-        renderer.animateAndRender();
+        renderer.animateAndRender(currentGameState);
     });
 
-    network.connect(user.username);
+    network.connect(user.username, mode);
 }
 
 class OfflineNetworkMock {
@@ -157,7 +197,7 @@ class OfflineNetworkMock {
     }
 }
 
-function startOfflineGame(user) {
+function startOfflineGame(user, mode = 'OFFLINE_2') {
     if (offlineStore) return;
 
     const uiState = new UIState();
@@ -175,17 +215,15 @@ function startOfflineGame(user) {
         if (!renderer) {
             const mockNetwork = new OfflineNetworkMock();
             renderer = new Renderer(currentGameState, uiState, turnEngine, mockNetwork);
-        } else {
-            renderer.gameState = currentGameState;
         }
         
         uiState.clearSelection(); 
-        renderer.animateAndRender();
+        renderer.animateAndRender(currentGameState);
 
-        if (aiPlayer) {
-            aiPlayer.onStateUpdate(currentGameState);
+        if (aiPlayers.length > 0) {
+            aiPlayers.forEach(ai => ai.onStateUpdate(currentGameState));
         }
-    });
+    }, mode);
 
     offlineStore.setUserName(user.username);
     
@@ -198,8 +236,11 @@ function startOfflineGame(user) {
         if (offlineUser) offlineUser.textContent = user.username;
     }
 
-    // Create AI (Player Index 1)
-    aiPlayer = new AIPlayer(offlineStore, 1);
+    // Create AIs
+    const modeConfig = offlineStore.gameState.modeConfig;
+    for (let i = 1; i < modeConfig.players; i++) {
+        aiPlayers.push(new AIPlayer(offlineStore, i));
+    }
     
     offlineStore.broadcastState();
 }

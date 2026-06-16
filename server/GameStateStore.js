@@ -3,9 +3,9 @@ import { GameManager } from '../shared/GameManager.js';
 import { TurnEngine } from '../shared/TurnEngine.js';
 import { RuleEngine } from '../shared/RuleEngine.js';
 
-class GameStateStore {
-    constructor() {
-        this.gameState = new GameState();
+export class GameStateStore {
+    constructor(modeConfig) {
+        this.gameState = new GameState(modeConfig);
         this.gameState.version = 1;
         this.gameState.playerAssignments = {};
         this.gameManager = new GameManager(this.gameState);
@@ -15,7 +15,7 @@ class GameStateStore {
     }
 
     initializeGame() {
-        this.gameManager.startNewRound();
+        // Game no longer starts immediately. It starts when the lobby is full.
     }
 
     resetGame() {
@@ -58,7 +58,7 @@ class GameStateStore {
         }
 
         const assignedIndexes = Object.values(this.playerAssignments);
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < this.gameState.modeConfig.players; i++) {
             if (!assignedIndexes.includes(i)) {
                 this.playerAssignments[socketId] = i;
                 this.gameState.playerAssignments = { ...this.playerAssignments };
@@ -71,6 +71,12 @@ class GameStateStore {
                 }
                 
                 this.updateHostPlayerIndex();
+                
+                if (Object.keys(this.playerAssignments).length === this.gameState.modeConfig.players) {
+                    this.gameState.status = 'PLAYING';
+                    this.gameManager.startNewRound();
+                }
+
                 return i;
             }
         }
@@ -231,7 +237,7 @@ class GameStateStore {
                 // 3. Zero-sum Settlement with multiplier
                 const multiplier = hasDouble ? 2 : 1;
                 const playersCount = config.players;
-                const settlement = adjustedScores.map((score, idx) => {
+                const settlement = cardScores.map((score, idx) => {
                     const baseProfit = score - config.breakEvenScore;
                     if (idx === ownerIdx) {
                         return (baseProfit + bonus * (playersCount - 1)) * multiplier;
@@ -281,5 +287,3 @@ class GameStateStore {
         }
     }
 }
-
-export const gameStateStore = new GameStateStore();

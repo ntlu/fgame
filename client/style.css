@@ -76,6 +76,52 @@ body.sidebar-open .sidebar-toggle-btn {
     left: 295px;
 }
 
+.leave-game-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 1002;
+    background: #ef4444;
+    color: white;
+    border: 1px solid #dc2626;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    outline: none;
+    text-transform: uppercase;
+}
+
+.leave-game-btn:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+}
+
+.mode-logout-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #ef4444;
+    color: white;
+    border: 1px solid #dc2626;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    text-transform: uppercase;
+}
+
+.mode-logout-btn:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+}
+
 /* Sidebar Cards / Panels */
 .sidebar-card {
     background: rgba(31, 41, 55, 0.85);
@@ -323,7 +369,7 @@ body.sidebar-open .container {
     gap: 6px;
     /* Giảm gap giữa các lá bài */
     background: #303030;
-    border-radius: 16px;
+    border-radius: 50px;
     padding: 5px;
     /* Giảm padding của bàn */
     justify-content: center;
@@ -336,20 +382,30 @@ body.sidebar-open .container {
     /* Giới hạn bàn không vượt quá 700px trên màn to */
 }
 
-.table.table-8-cols {
-    grid-template-columns: repeat(8, 1fr);
+.table.table-9-cols {
+    grid-template-columns: repeat(9, 1fr);
     width: 100%;
 }
 
 .table .card,
-.table .noc-card,
 .table .empty-slot {
     width: 100%;
-    max-width: 50px;
+    max-width: 55px;
     /* Thu nhỏ các lá bài trên bàn */
     height: auto;
     aspect-ratio: 2 / 3;
     margin: 0 auto;
+}
+
+.table .noc-card {
+    grid-row: span 2;
+    width: 100%;
+    max-width: 55px;
+    /* Slightly wider than normal cards */
+    height: 50%;
+    min-height: 100px;
+    /* Ensure it covers two rows */
+    margin: 50% auto;
 }
 
 /* Card Styling */
@@ -416,38 +472,37 @@ body.sidebar-open .container {
 
 /* Nọc card */
 .noc-card {
-    width: 56px;
-    height: 84px;
-    border-radius: 6px;
-    background: repeating-linear-gradient(45deg, #b91c1c, #b91c1c 8px, #7f1d1d 8px, #7f1d1d 16px);
-    border: 2px solid white;
+    border-radius: 8px;
+    background: #ef4444;
+    border: 2px solid #b91c1c;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     color: white;
     font-weight: 800;
-    font-size: 11px;
+    font-size: 16px;
     text-align: center;
-    box-shadow:
-        1px 1px 0px rgba(255, 255, 255, 0.9),
-        2px 2px 0px #7f1d1d,
-        3px 3px 0px rgba(255, 255, 255, 0.9),
-        4px 4px 0px #7f1d1d,
-        5px 5px 6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
     position: relative;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    transition: transform 0.2s;
+}
+
+.noc-card:hover {
+    transform: scale(1.05);
 }
 
 .noc-card .noc-title {
-    font-size: 10px;
-    opacity: 0.9;
+    font-size: 16px;
     text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
 }
 
 .noc-card .noc-count {
-    font-size: 18px;
-    color: #fbbf24;
+    font-size: 16px;
+    color: white;
 }
 
 /* Selectable card cues */
@@ -495,7 +550,7 @@ body.sidebar-open .container {
 }
 
 .hand-action-wrapper button {
-    padding: 10px 18px;
+    padding: 10px 5px;
     border: none;
     border-radius: 8px;
     font-size: 14px;
@@ -749,7 +804,8 @@ body.sidebar-open .container {
 }
 
 .action-slot::before {
-    content: 'PLAY';
+    /* PLAY */
+    content: '';
     position: absolute;
     top: -20px;
     font-size: 11px;
@@ -761,7 +817,8 @@ body.sidebar-open .container {
 }
 
 .secondary-slot::before {
-    content: 'CAPTURE';
+    /* CAPTURE */
+    content: '';
 }
 
 .action-slot.has-card {

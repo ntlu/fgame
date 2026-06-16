@@ -41,6 +41,7 @@ export class GameState {
         this.secretCardOwner = null;
         this.secretCardRevealed = false;
         this.secretCardBonus = 0;
+        this.status = 'LOBBY';
     }
 
     resetForNewRound() {
@@ -58,5 +59,6 @@ export class GameState {
         this.secretCardOwner = null;
         this.secretCardRevealed = false;
         this.secretCardBonus = 0;
+        this.status = 'PLAYING';
     }
 }

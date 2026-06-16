@@ -65,7 +65,44 @@ export class TurnEngine {
             }
         }
         
-        // Không ăn được hoặc chọn sai => đưa xuống bàn
+        // Tự động ăn nếu user không chọn hoặc chọn sai lá bài
+        const possibleCards = RuleEngine.findCapturableCards(playedCard, this.gameState.tableCards);
+        if (possibleCards.length > 0) {
+            // CHECK FOR 3-MATCH ON TABLE (5, 10, J, Q, K)
+            const autoCaptureRanks = ['5', '10', 'J', 'Q', 'K'];
+            if (autoCaptureRanks.includes(playedCard.rank)) {
+                const matchingTableCards = this.gameState.tableCards.filter(c => c && c.rank === playedCard.rank);
+                if (matchingTableCards.length === 3) {
+                    player.capturedCards.push(playedCard);
+                    matchingTableCards.forEach(mc => {
+                        const idx = this.gameState.tableCards.findIndex(c => c && c.id === mc.id);
+                        this.gameState.tableCards[idx] = null;
+                        player.capturedCards.push(mc);
+                    });
+                    player.score = RuleEngine.calculatePlayerScore(player.capturedCards);
+                    return { playedCard, tableCard: matchingTableCards, captured: true };
+                }
+            }
+
+            // Auto capture highest score card
+            possibleCards.sort((a, b) => {
+                const scoreA = RuleEngine.calculateCardScore(a);
+                const scoreB = RuleEngine.calculateCardScore(b);
+                if (scoreA !== scoreB) return scoreB - scoreA;
+                
+                const aIsRed = (a.suit === 'H' || a.suit === 'D') ? 1 : 0;
+                const bIsRed = (b.suit === 'H' || b.suit === 'D') ? 1 : 0;
+                return bIsRed - aIsRed;
+            });
+            const tableCard = possibleCards[0];
+            const autoTableCardIndex = this.gameState.tableCards.findIndex(c => c && c.id === tableCard.id);
+            this.gameState.tableCards[autoTableCardIndex] = null;
+            player.capturedCards.push(playedCard, tableCard);
+            player.score = RuleEngine.calculatePlayerScore(player.capturedCards);
+            return { playedCard, tableCard: [tableCard], captured: true };
+        }
+
+        // Không ăn được => đưa xuống bàn
         const emptyIndex = this.gameState.tableCards.indexOf(null);
         if (emptyIndex !== -1) {
             this.gameState.tableCards[emptyIndex] = playedCard;
@@ -106,7 +143,16 @@ export class TurnEngine {
                 }
             }
 
-            // Auto capture first possible card
+            // Auto capture highest score card
+            possibleCards.sort((a, b) => {
+                const scoreA = RuleEngine.calculateCardScore(a);
+                const scoreB = RuleEngine.calculateCardScore(b);
+                if (scoreA !== scoreB) return scoreB - scoreA;
+                
+                const aIsRed = (a.suit === 'H' || a.suit === 'D') ? 1 : 0;
+                const bIsRed = (b.suit === 'H' || b.suit === 'D') ? 1 : 0;
+                return bIsRed - aIsRed;
+            });
             const tableCard = possibleCards[0];
             const tableCardIndex = this.gameState.tableCards.findIndex(c => c && c.id === tableCard.id);
             this.gameState.tableCards[tableCardIndex] = null;
