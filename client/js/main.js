@@ -146,14 +146,77 @@ function init() {
     const leaveBtn = document.getElementById('leave-game-btn');
     if (leaveBtn) {
         leaveBtn.addEventListener('click', () => {
-            if (confirm("Bạn có chắc chắn muốn rời bàn và quay lại sảnh không?")) {
-                if (network) {
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-dialog-overlay';
+            
+            const dialog = document.createElement('div');
+            dialog.className = 'custom-dialog';
+            
+            dialog.innerHTML = `
+                <h3>🚪 Xác nhận rời bàn</h3>
+                <p>Bạn có chắc chắn muốn rời bàn và quay lại sảnh không?</p>
+                <div class="custom-dialog-actions">
+                    <button class="btn-cancel">Hủy</button>
+                    <button class="btn-confirm">Rời bàn</button>
+                </div>
+            `;
+            
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            
+            const closeDialog = () => {
+                overlay.style.animation = 'fadeOut 0.2s ease forwards';
+                dialog.style.animation = 'slideDown 0.2s ease forwards';
+                setTimeout(() => document.body.removeChild(overlay), 200);
+            };
+            
+            dialog.querySelector('.btn-cancel').addEventListener('click', closeDialog);
+            
+            dialog.querySelector('.btn-confirm').addEventListener('click', () => {
+                closeDialog();
+                if (typeof network !== 'undefined' && network && network.socket) {
                     network.socket.disconnect();
                 }
                 window.location.reload();
-            }
+            });
         });
     }
+
+    // Fullscreen on double tap
+    let lastTap = 0;
+    
+    function toggleFullScreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                document.documentElement.webkitRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+    }
+
+    document.addEventListener('touchend', function (e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+            toggleFullScreen();
+            // Optional: prevent default to avoid zooming if browser allows it
+            // e.preventDefault(); 
+        }
+        lastTap = currentTime;
+    });
+
+    document.addEventListener('dblclick', function (e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+        toggleFullScreen();
+    });
 }
 
 function startGameClient(user, mode = 'ONLINE_4') {

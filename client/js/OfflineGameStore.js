@@ -142,15 +142,21 @@ export class OfflineGameStore {
                 }
                 
                 const cardScores = this.gameState.players.map(p => RuleEngine.calculatePlayerScore(p.capturedCards));
-                const adjustedScores = [...cardScores];
                 const secretCard = this.gameState.secretCard;
-                
                 const bonus = secretCard ? RuleEngine.calculateCardScore(secretCard) : 0;
-                if (bonus > 0) {
-                    adjustedScores[ownerIdx] += bonus;
-                }
-
+                
                 const config = this.gameState.modeConfig;
+                const playersCount = config.players;
+                
+                const adjustedScores = cardScores.map((score, idx) => {
+                    if (ownerIdx === null || ownerIdx === undefined || bonus === 0) return score;
+                    if (idx === ownerIdx) {
+                        return score + bonus * (playersCount - 1);
+                    } else {
+                        return score - bonus;
+                    }
+                });
+
                 const hasDouble = adjustedScores.some(score => score >= config.x2Threshold);
                 if (this.gameState.totalRoundsPlayed === undefined) this.gameState.totalRoundsPlayed = 0;
                 if (this.gameState.doubleRoundsCount === undefined) this.gameState.doubleRoundsCount = 0;
@@ -159,7 +165,6 @@ export class OfflineGameStore {
                 if (hasDouble) this.gameState.doubleRoundsCount++;
 
                 const multiplier = hasDouble ? 2 : 1;
-                const playersCount = config.players;
                 const settlement = cardScores.map((score, idx) => {
                     const baseProfit = score - config.breakEvenScore;
                     if (idx === ownerIdx) {

@@ -218,13 +218,19 @@ export class GameStateStore {
                 this.gameState.secretCardBonus = bonus;
 
                 // 1. Calculate adjusted scores for double/X2 check
-                const adjustedScores = [...cardScores];
-                if (ownerIdx !== null && ownerIdx !== undefined) {
-                    adjustedScores[ownerIdx] += bonus;
-                }
+                const config = this.gameState.modeConfig || { breakEvenScore: 55, x2Threshold: 90, players: 4 };
+                const playersCount = config.players;
+                
+                const adjustedScores = cardScores.map((score, idx) => {
+                    if (ownerIdx === null || ownerIdx === undefined) return score;
+                    if (idx === ownerIdx) {
+                        return score + bonus * (playersCount - 1);
+                    } else {
+                        return score - bonus;
+                    }
+                });
 
                 // 2. Check double condition on adjusted score (>= x2Threshold points triggers X2)
-                const config = this.gameState.modeConfig || { breakEvenScore: 55, x2Threshold: 90, players: 4 };
                 const hasDouble = adjustedScores.some(score => score >= config.x2Threshold);
                 if (this.gameState.totalRoundsPlayed === undefined) this.gameState.totalRoundsPlayed = 0;
                 if (this.gameState.doubleRoundsCount === undefined) this.gameState.doubleRoundsCount = 0;
@@ -236,7 +242,6 @@ export class GameStateStore {
 
                 // 3. Zero-sum Settlement with multiplier
                 const multiplier = hasDouble ? 2 : 1;
-                const playersCount = config.players;
                 const settlement = cardScores.map((score, idx) => {
                     const baseProfit = score - config.breakEvenScore;
                     if (idx === ownerIdx) {

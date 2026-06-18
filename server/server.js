@@ -14,7 +14,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = 3000;
+// const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, '../client')));
 app.use('/shared', express.static(path.join(__dirname, '../shared')));
@@ -46,12 +47,12 @@ function getRoomStateStore(roomId) {
 
 function getFilteredStateForPlayer(gameState, playerIndex) {
     const stateCopy = JSON.parse(JSON.stringify(gameState));
-    
+
     if (stateCopy.deck) {
         stateCopy.deckRemaining = stateCopy.deck.length;
         delete stateCopy.deck;
     }
-    
+
     if (stateCopy.players) {
         stateCopy.players = stateCopy.players.map((player, idx) => {
             if (idx === playerIndex) {
@@ -70,7 +71,7 @@ function getFilteredStateForPlayer(gameState, playerIndex) {
             stateCopy.secretCard = null;
         }
     }
-    
+
     return stateCopy;
 }
 
@@ -95,7 +96,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         connectedClients--;
         console.log(`Client ngắt kết nối: ${socket.id}. Tổng số: ${connectedClients}`);
-        
+
         for (const [username, id] of activeUsers.entries()) {
             if (id === socket.id) {
                 activeUsers.delete(username);
@@ -111,7 +112,7 @@ io.on('connection', (socket) => {
                 store.removeAssignment(socket.id);
                 clientRoom.delete(socket.id);
                 socket.leave(roomId);
-                
+
                 // If room empty, delete it
                 if (Object.keys(store.playerAssignments).length === 0) {
                     rooms.delete(roomId);
@@ -121,7 +122,7 @@ io.on('connection', (socket) => {
                 }
             }
         }
-        
+
         io.emit('clientCountUpdate', connectedClients);
     });
 
@@ -159,7 +160,7 @@ io.on('connection', (socket) => {
     socket.on('joinGame', (data) => {
         const name = (data && typeof data.name === 'string') ? data.name : '';
         const modeId = (data && data.mode) ? data.mode : 'ONLINE_4';
-        
+
         if (!name) {
             socket.emit('joinError', 'Tên đăng nhập không hợp lệ.');
             return;
@@ -212,10 +213,10 @@ io.on('connection', (socket) => {
 
     socket.on('playTurn', (data) => {
         console.log(`playTurn được yêu cầu bởi: ${socket.id}`, data);
-        
+
         const roomId = clientRoom.get(socket.id);
         if (!roomId) return;
-        
+
         const store = getRoomStateStore(roomId);
         if (!store) return;
 

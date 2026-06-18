@@ -263,14 +263,22 @@ export class Renderer {
 
             const suitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
             const sym = suitMap[secretCard.suit] || '';
-            div.innerHTML = `
-                <div class="card-top" style="font-size: 8px;">Bí mật</div>
-                <div class="card-center" style="flex-direction: column; gap: 2px;">
-                    <span style="font-size: 11px; line-height: 1;">${secretCard.rank}</span>
-                    <span style="font-size: 16px; line-height: 1;">${sym}</span>
-                </div>
-                <div class="card-bottom" style="font-size: 8px;">${sym}</div>
-            `;
+            
+            if (['J', 'Q', 'K'].includes(secretCard.rank)) {
+                const imgSrc = `/assets/cards/${secretCard.rank}-${secretCard.suit}.png`;
+                div.innerHTML = `<img src="${imgSrc}" style="width:100%; height:100%; object-fit:contain; border-radius:6px; display:block;" alt="${secretCard.rank} ${sym}" />`;
+                div.style.padding = '0';
+                div.style.backgroundColor = 'transparent';
+            } else {
+                div.innerHTML = `
+                    <div class="card-top" style="font-size: 8px;">Bí mật</div>
+                    <div class="card-center" style="flex-direction: column; gap: 2px;">
+                        <span style="font-size: 11px; line-height: 1;">${secretCard.rank}</span>
+                        <span style="font-size: 16px; line-height: 1;">${sym}</span>
+                    </div>
+                    <div class="card-bottom" style="font-size: 8px;">${sym}</div>
+                `;
+            }
         } else {
             // Render face down
             div.innerHTML = `
@@ -492,11 +500,19 @@ export class Renderer {
         const suitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
         const sym = suitMap[card.suit];
 
-        div.innerHTML = `
-            <div class="card-top">${card.rank} ${sym}</div>
-            <div class="card-center">${sym}</div>
-            <div class="card-bottom">${sym} ${card.rank}</div>
-        `;
+        if (['J', 'Q', 'K'].includes(card.rank)) {
+            const imgSrc = `/assets/cards/${card.rank}-${card.suit}.png`;
+            div.innerHTML = `<img src="${imgSrc}" style="width:100%; height:100%; object-fit:contain; border-radius:6px; display:block;" alt="${card.rank} ${sym}" />`;
+            // Remove padding to let image fill entirely
+            div.style.padding = '0';
+            div.style.backgroundColor = 'transparent';
+        } else {
+            div.innerHTML = `
+                <div class="card-top">${card.rank} ${sym}</div>
+                <div class="card-center">${sym}</div>
+                <div class="card-bottom">${sym} ${card.rank}</div>
+            `;
+        }
         return div;
     }
 
@@ -646,11 +662,16 @@ export class Renderer {
 
             html += `
                 <div style="border: 2px dashed #fbbf24; border-radius: 12px; padding: 12px 20px; margin-bottom: 25px; width: 100%; max-width: 450px; background: rgba(31, 41, 55, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
-                    <div style="font-weight: 800; color: #fbbf24; letter-spacing: 2px; font-size: 11px; text-transform: uppercase;">SECRET CARD</div>
-                    <div class="card ${isRed ? 'red' : 'black'}" style="width: 50px; height: 75px; background: white; border-radius: 6px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: space-between; padding: 4px; font-weight: 800; font-size: 11px; user-select: none;">
-                        <div style="align-self: flex-start; line-height: 1;">${rank} ${suit}</div>
-                        <div style="font-size: 18px; text-align: center; flex-grow: 1; display: flex; align-items: center; justify-content: center;">${suit}</div>
-                        <div style="align-self: flex-end; transform: rotate(180deg); line-height: 1;">${suit} ${rank}</div>
+                    <div style="font-weight: 800; color: #fbbf24; letter-spacing: 2px; font-size: 11px; text-transform: uppercase;">LÁ BÀI TẨY</div>
+                    <div class="card ${isRed ? 'red' : 'black'}" style="width: 50px; height: 75px; background: white; border-radius: 6px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: space-between; padding: 0; font-weight: 800; font-size: 11px; user-select: none; overflow: hidden; border: none;">
+                        ${['J', 'Q', 'K'].includes(rank) ? 
+                            `<img src="/assets/cards/${rank}-${suitChar}.png" style="width:100%; height:100%; object-fit:contain; display:block;" alt="${rank} ${suit}" />` :
+                            `
+                                <div style="padding: 4px; align-self: flex-start; line-height: 1;">${rank} ${suit}</div>
+                                <div style="font-size: 18px; text-align: center; flex-grow: 1; display: flex; align-items: center; justify-content: center;">${suit}</div>
+                                <div style="padding: 4px; align-self: flex-end; transform: rotate(180deg); line-height: 1;">${suit} ${rank}</div>
+                            `
+                        }
                     </div>
                     <div style="font-size: 12px; color: #d1d5db; text-align: center;">
                         <div>Sở hữu: <strong>${ownerPlayerName}</strong> | Giá trị: <strong style="color: #fbbf24;">+${secretCardBonus} điểm</strong></div>
@@ -669,13 +690,18 @@ export class Renderer {
 
             const cardScore = cardScores[i] || 0;
             const isOwner = i === secretCardOwner;
-            const bonusPoints = isOwner ? secretCardBonus : 0;
-            const totalScore = cardScore + bonusPoints;
+            const playersCount = this.gameState.modeConfig ? this.gameState.modeConfig.players : 4;
+            const tayPoints = (secretCardOwner !== null && secretCardOwner !== undefined && secretCardBonus > 0)
+                ? (isOwner ? secretCardBonus * (playersCount - 1) : -secretCardBonus)
+                : 0;
+            const totalScore = cardScore + tayPoints;
+            const taySign = tayPoints > 0 ? '+' : '';
 
             const moneyChangeVal = (roundResult.moneyChange && roundResult.moneyChange[i] !== undefined)
                 ? roundResult.moneyChange[i]
                 : profit * 1000;
             const moneyChangeSign = moneyChangeVal > 0 ? '+' : '';
+            const moneyChangeText = `${moneyChangeSign}${this.formatMoney(moneyChangeVal)} VNĐ`;
 
             // Render all captured cards
             const capturedHtml = (p.capturedCards || []).map(c => {
@@ -683,23 +709,27 @@ export class Renderer {
                 const isRed = c.suit === 'H' || c.suit === 'D';
                 return `<div class="mini-card ${isRed ? 'red' : 'black'}">${c.rank}${suitMap[c.suit]}</div>`;
             }).join('');
+            
+            let tayPointsHtml = '';
+            if (secretCardOwner !== null && secretCardOwner !== undefined && secretCardBonus > 0) {
+                tayPointsHtml = `<div>• Điểm tẩy: <strong class="${tayPoints > 0 ? 'profit-pos' : 'profit-neg'}">${taySign}${tayPoints}</strong></div>`;
+            }
 
             html += `
                 <div class="player-result ${isWinner ? 'is-winner' : ''}" style="min-width: 190px; text-align: left;">
                     <strong style="color: #fbbf24; font-size: 15px;">${pName}</strong><br>
                     <div style="font-size: 12px; margin-top: 6px; color: #cbd5e0; line-height: 1.6; display: flex; flex-direction: column; gap: 2px;">
                         <div>• Điểm bài ăn: <strong>${cardScore}</strong></div>
-                        <div>• Thưởng Secret: <strong>+${bonusPoints}</strong></div>
+                        ${tayPointsHtml}
                         <div style="border-top: 1px solid rgba(255,255,255,0.15); margin: 4px 0; padding-top: 4px;">
                             • Tổng điểm: <strong style="color: #fbbf24; font-size: 13px;">${totalScore}</strong>
                         </div>
-                        <div>• Settlement: <span class="${profit >= 0 ? 'profit-pos' : 'profit-neg'}"><strong>${sign}${profit}</strong></span></div>
-                        <div>• Money: <span class="${moneyChangeVal >= 0 ? 'profit-pos' : 'profit-neg'}"><strong>${moneyChangeSign}${this.formatMoney(moneyChangeVal)}</strong></span></div>
+                        <div>• Tổng kết: <span class="${profit >= 0 ? 'profit-pos' : 'profit-neg'}"><strong>${sign}${profit} điểm (${moneyChangeText})</strong></span></div>
                         <div style="border-top: 1px dashed rgba(255,255,255,0.15); margin: 4px 0; padding-top: 4px;">
-                            • Balance: <strong style="color: #10b981;">${this.formatMoney(p.money)}</strong>
+                            • Số tiền hiện tại: <strong style="color: #10b981;">${this.formatMoney(p.money)} VNĐ</strong>
                         </div>
                         <div style="border-top: 1px dashed rgba(255,255,255,0.15); margin: 4px 0; padding-top: 4px;">
-                            • Đã ăn: <div class="captured-preview" style="margin-top: 4px; gap: 2px;">${capturedHtml || '<span style="color:#6b7280;font-size:10px;">(Không có)</span>'}</div>
+                            • Danh sách bài đã ăn: <div class="captured-preview" style="margin-top: 4px; gap: 2px;">${capturedHtml || '<span style="color:#6b7280;font-size:10px;">(Không có)</span>'}</div>
                         </div>
                     </div>
                 </div>
@@ -930,11 +960,19 @@ export class Renderer {
                     cardDiv.classList.add(cardObj.isRed ? 'red' : 'black');
                     const suitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
                     const sym = suitMap[cardObj.suit] || '';
-                    cardDiv.innerHTML = `
-                        <div class="card-top">${cardObj.rank} ${sym}</div>
-                        <div class="card-center">${sym}</div>
-                        <div class="card-bottom">${sym} ${cardObj.rank}</div>
-                    `;
+                    
+                    if (['J', 'Q', 'K'].includes(cardObj.rank)) {
+                        const imgSrc = `/assets/cards/${cardObj.rank}-${cardObj.suit}.png`;
+                        cardDiv.innerHTML = `<img src="${imgSrc}" style="width:100%; height:100%; object-fit:contain; border-radius:6px; display:block;" alt="${cardObj.rank} ${sym}" />`;
+                        cardDiv.style.padding = '0';
+                        cardDiv.style.backgroundColor = 'transparent';
+                    } else {
+                        cardDiv.innerHTML = `
+                            <div class="card-top">${cardObj.rank} ${sym}</div>
+                            <div class="card-center">${sym}</div>
+                            <div class="card-bottom">${sym} ${cardObj.rank}</div>
+                        `;
+                    }
                 } else {
                     cardDiv.classList.add('card-back');
                     cardDiv.innerHTML = '<div class="pattern">🂠</div>';

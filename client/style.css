@@ -12,6 +12,7 @@ body {
     overflow-y: auto;
     /* Cho phép cuộn */
     overflow-x: hidden;
+    touch-action: manipulation; /* Ngăn zoom khi double tap trên điện thoại */
 }
 
 /* Sidebar Styling */
@@ -23,7 +24,7 @@ body {
     width: 280px;
     background: #111827;
     border-right: 1px solid #1f2937;
-    padding: 70px 20px 20px 20px;
+    padding: 35px 20px 20px 20px;
     overflow-y: auto;
     z-index: 1000;
     transform: translateX(-100%);
@@ -77,10 +78,7 @@ body.sidebar-open .sidebar-toggle-btn {
 }
 
 .leave-game-btn {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    z-index: 1002;
+    width: 100%;
     background: #ef4444;
     color: white;
     border: 1px solid #dc2626;
@@ -184,9 +182,9 @@ body.sidebar-open .sidebar-toggle-btn {
     grid-template-columns: 180px 1fr 180px;
     grid-template-rows: auto 1fr auto;
     grid-template-areas:
-        ".       top     ."
+        "left    top     right"
         "left    table   right"
-        ".       bottom  .";
+        "bottom  bottom  bottom";
     gap: 10px;
     /* Giảm gap giữa người chơi và bàn */
     padding: 10px 20px;
@@ -1195,4 +1193,99 @@ body.sidebar-open .container {
     opacity: 0.5;
     cursor: not-allowed;
     filter: grayscale(100%);
+}
+
+/* Custom Dialog */
+.custom-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease forwards;
+}
+
+.custom-dialog {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 30px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.custom-dialog h3 {
+    margin: 0 0 15px 0;
+    color: #fbbf24;
+    font-size: 22px;
+}
+
+.custom-dialog p {
+    margin: 0 0 25px 0;
+    color: #cbd5e0;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.custom-dialog-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.custom-dialog-actions button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.custom-dialog-actions .btn-cancel {
+    background: #4b5563;
+    color: white;
+}
+
+.custom-dialog-actions .btn-cancel:hover {
+    background: #6b7280;
+    transform: translateY(-2px);
+}
+
+.custom-dialog-actions .btn-confirm {
+    background: #ef4444;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.4);
+}
+
+.custom-dialog-actions .btn-confirm:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px -1px rgba(239, 68, 68, 0.5);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideDown {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(30px) scale(0.95); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
