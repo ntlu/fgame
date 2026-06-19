@@ -12,6 +12,9 @@ export class GameManager {
         this.gameState.dealerIndex = (this.gameState.totalRoundsPlayed || 0) % this.gameState.modeConfig.players;
         this.gameState.currentPlayerIndex = this.gameState.dealerIndex;
 
+        const colors = ['blue', 'gold', 'orange', 'gray'];
+        this.gameState.cardBackColor = colors[Math.floor(Math.random() * colors.length)];
+
         this.dealCards();
     }
 

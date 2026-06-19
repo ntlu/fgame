@@ -12,7 +12,8 @@ body {
     overflow-y: auto;
     /* Cho phép cuộn */
     overflow-x: hidden;
-    touch-action: manipulation; /* Ngăn zoom khi double tap trên điện thoại */
+    touch-action: manipulation;
+    /* Ngăn zoom khi double tap trên điện thoại */
 }
 
 /* Sidebar Styling */
@@ -367,7 +368,7 @@ body.sidebar-open .container {
     gap: 6px;
     /* Giảm gap giữa các lá bài */
     background: #303030;
-    border-radius: 50px;
+    border-radius: 20px;
     padding: 5px;
     /* Giảm padding của bàn */
     justify-content: center;
@@ -382,7 +383,7 @@ body.sidebar-open .container {
 
 .table.table-9-cols {
     grid-template-columns: repeat(9, 1fr);
-    width: 100%;
+    width: 90%;
 }
 
 .table .card,
@@ -397,7 +398,7 @@ body.sidebar-open .container {
 
 .table .noc-card {
     grid-row: span 2;
-    width: 100%;
+    width: 70%;
     max-width: 55px;
     /* Slightly wider than normal cards */
     height: 50%;
@@ -454,7 +455,7 @@ body.sidebar-open .container {
 }
 
 .card-top {
-    font-size: 14px;
+    font-size: 13px;
     align-self: flex-start;
     line-height: 1;
 }
@@ -474,6 +475,24 @@ body.sidebar-open .container {
     justify-content: center;
     color: rgba(255, 255, 255, 0.7);
     font-size: 28px;
+}
+
+.card-back.gold {
+    background: repeating-linear-gradient(45deg, #ca8a04, #ca8a04 8px, #854d0e 8px, #854d0e 16px);
+    border-color: #fef08a;
+    color: rgba(254, 240, 138, 0.8);
+}
+
+.card-back.orange {
+    background: repeating-linear-gradient(45deg, #ea580c, #ea580c 8px, #9a3412 8px, #9a3412 16px);
+    border-color: #ffedd5;
+    color: rgba(255, 237, 213, 0.8);
+}
+
+.card-back.gray {
+    background: repeating-linear-gradient(45deg, #4b5563, #4b5563 8px, #1f2937 8px, #1f2937 16px);
+    border-color: #e5e7eb;
+    color: rgba(229, 231, 235, 0.8);
 }
 
 /* Nọc card */
@@ -724,13 +743,11 @@ body.sidebar-open .container {
     100% {
         box-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
         border-color: #fbbf24;
-        transform: scale(1);
     }
 
     50% {
         box-shadow: 0 0 25px rgba(251, 191, 36, 1);
         border-color: #f59e0b;
-        transform: scale(1.15);
     }
 }
 
@@ -783,14 +800,14 @@ body.sidebar-open .container {
 
 .player-left .action-zone {
     right: -60px;
-    top: 50%;
+    top: 65%;
     transform: translateY(-50%);
     flex-direction: column;
 }
 
 .player-right .action-zone {
     left: -60px;
-    top: 50%;
+    top: 65%;
     transform: translateY(-50%);
     flex-direction: column;
 }
@@ -933,7 +950,7 @@ body.sidebar-open .container {
             "table   table"
             "bottom  bottom";
         padding: 10px;
-        gap: 12px;
+        gap: 0px;
     }
 
     .player-top,
@@ -942,8 +959,8 @@ body.sidebar-open .container {
     }
 
     .table {
-        padding: 8px;
-        gap: 4px;
+        padding: 0px;
+        gap: 0px;
     }
 
     .table.table-8-cols {
@@ -1276,16 +1293,35 @@ body.sidebar-open .container {
 }
 
 @keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @keyframes slideDown {
-    from { opacity: 1; transform: translateY(0) scale(1); }
-    to { opacity: 0; transform: translateY(30px) scale(0.95); }
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
 }
 
 @keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
 }

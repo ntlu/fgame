@@ -281,6 +281,7 @@ export class Renderer {
             }
         } else {
             // Render face down
+            div.className = `card secret-card-slot ${this.getCardBackClass()}`;
             div.innerHTML = `
                 <div class="pattern" style="font-size: 20px;">🂠</div>
                 <div style="font-size: 8px; font-weight: bold; margin-top: 2px; color: #fbbf24;">Bí Mật</div>
@@ -344,7 +345,7 @@ export class Renderer {
             }
             const count = this.isDealingRound ? 0 : player.hand.length;
             repCard.innerHTML = `
-                <div class="card card-back"><div class="pattern">🂠</div></div>
+                <div class="card ${this.getCardBackClass()}"><div class="pattern">🂠</div></div>
                 <div class="card-count-badge">${count}</div>
             `;
             hand.appendChild(repCard);
@@ -465,6 +466,11 @@ export class Renderer {
             } else {
                 const emptySlot = document.createElement('div');
                 emptySlot.className = 'card empty-slot';
+                if (innerIndices.includes(i)) {
+                    emptySlot.classList.add('inner-slot');
+                } else if (edgeIndices.includes(i)) {
+                    emptySlot.classList.add('edge-slot');
+                }
                 table.appendChild(emptySlot);
             }
         }
@@ -476,6 +482,8 @@ export class Renderer {
         const div = document.createElement('div');
         div.className = `card ${card.isRed ? 'red' : 'black'}`;
         div.dataset.cardId = card.id;
+        div.dataset.rank = card.rank;
+        div.dataset.suit = card.suit;
 
         if (this.isDealingRound) {
             div.classList.add('deal-hidden');
@@ -516,9 +524,14 @@ export class Renderer {
         return div;
     }
 
+    getCardBackClass() {
+        const color = this.gameState.cardBackColor;
+        return (color && color !== 'blue') ? `card-back ${color}` : 'card-back';
+    }
+
     createCardBack() {
         const div = document.createElement('div');
-        div.className = 'card card-back';
+        div.className = `card ${this.getCardBackClass()}`;
         div.innerHTML = `<div class="pattern">🂠</div>`;
         return div;
     }
@@ -838,7 +851,7 @@ export class Renderer {
                 const targetRect = targetEl.getBoundingClientRect();
 
                 const cardDiv = document.createElement('div');
-                cardDiv.className = 'card card-back floating-anim-card';
+                cardDiv.className = `card ${this.getCardBackClass()} floating-anim-card`;
                 cardDiv.style.position = 'fixed';
                 cardDiv.style.left = `${nocRect.left}px`;
                 cardDiv.style.top = `${nocRect.top}px`;
@@ -974,7 +987,7 @@ export class Renderer {
                         `;
                     }
                 } else {
-                    cardDiv.classList.add('card-back');
+                    cardDiv.className = `card ${this.getCardBackClass()}`;
                     cardDiv.innerHTML = '<div class="pattern">🂠</div>';
                 }
 
@@ -985,12 +998,19 @@ export class Renderer {
                 cardDiv.style.height = `${startRect.height || 84}px`;
                 cardDiv.style.margin = '0';
                 cardDiv.style.transform = 'none';
+                cardDiv.style.transformOrigin = 'top left';
                 animLayer.appendChild(cardDiv);
 
                 cardDiv.offsetHeight; // reflow
 
                 cardDiv.style.transition = `transform ${duration / 1000}s cubic-bezier(0.25, 0.8, 0.25, 1), opacity ${duration / 1000}s ease`;
-                cardDiv.style.transform = `translate(${endRect.left - startRect.left}px, ${endRect.top - startRect.top}px)`;
+                let scaleX = endRect.width / (startRect.width || 56);
+                let scaleY = endRect.height / (startRect.height || 84);
+                if (isFadeOut) {
+                    scaleX = 0.4;
+                    scaleY = 0.4;
+                }
+                cardDiv.style.transform = `translate(${endRect.left - startRect.left}px, ${endRect.top - startRect.top}px) scale(${scaleX}, ${scaleY})`;
                 if (isFadeOut) {
                     cardDiv.style.opacity = '0';
                 }
@@ -1011,10 +1031,8 @@ export class Renderer {
 
             if (activePlayerIndex === this.network.localPlayerIndex) {
                 const handCards = seatEl.querySelectorAll('.hand .card');
-                const revSuitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
-                const sym = revSuitMap[playedCard.suit] || '';
                 for (let el of handCards) {
-                    if (el.textContent.includes(playedCard.rank) && el.textContent.includes(sym)) {
+                    if (el.dataset.rank === playedCard.rank && el.dataset.suit === playedCard.suit) {
                         startRect = el.getBoundingClientRect();
                         el.style.opacity = '0';
                         break;
@@ -1037,8 +1055,11 @@ export class Renderer {
             // Bước 2: Lá bài từ tay bay tới Play Preview Zone
             await animateFlight(playedCard, startRect, primarySlotRect, false, STEP_DELAY);
             if (primarySlot) {
-                primarySlot.innerHTML = this.createCard(playedCard).innerHTML;
+                const tempCard = this.createCard(playedCard);
+                primarySlot.innerHTML = tempCard.innerHTML;
                 primarySlot.className = `action-slot primary-slot card ${playedCard.isRed ? 'red' : 'black'} has-card`;
+                primarySlot.style.padding = tempCard.style.padding;
+                primarySlot.style.backgroundColor = tempCard.style.backgroundColor;
             }
 
             // Bước 3: Dừng tại đây
@@ -1053,9 +1074,8 @@ export class Renderer {
                 const revSuitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
                 
                 capturedCards.forEach(cc => {
-                    const sym = revSuitMap[cc.suit] || '';
                     for (let el of tableCards) {
-                        if (el.textContent.includes(cc.rank) && el.textContent.includes(sym) && !targetEls.includes(el)) {
+                        if (el.dataset.rank === cc.rank && el.dataset.suit === cc.suit && !targetEls.includes(el)) {
                             targetEls.push(el);
                             capturedRects.push(el.getBoundingClientRect());
                             break;
@@ -1077,8 +1097,11 @@ export class Renderer {
 
                     await animateFlight(cc, rect, secondarySlotRect, false, STEP_DELAY);
                     if (secondarySlot) {
-                        secondarySlot.innerHTML = this.createCard(cc).innerHTML;
+                        const tempCard = this.createCard(cc);
+                        secondarySlot.innerHTML = tempCard.innerHTML;
                         secondarySlot.className = `action-slot secondary-slot card ${cc.isRed ? 'red' : 'black'} has-card`;
+                        secondarySlot.style.padding = tempCard.style.padding;
+                        secondarySlot.style.backgroundColor = tempCard.style.backgroundColor;
                     }
                     await new Promise(r => setTimeout(r, STEP_DELAY));
                 }
@@ -1094,11 +1117,16 @@ export class Renderer {
                 await new Promise(r => setTimeout(r, STEP_DELAY));
             } else {
                 // TRƯỜNG HỢP A: KHÔNG ĂN ĐƯỢC
-                const emptySlots = Array.from(tableEl.querySelectorAll('.empty-slot'));
+                const innerEmptySlots = Array.from(tableEl.querySelectorAll('.empty-slot.inner-slot'));
+                const edgeEmptySlots = Array.from(tableEl.querySelectorAll('.empty-slot.edge-slot'));
                 let targetRect = tableRect;
                 let targetSlot = null;
-                if (emptySlots.length > 0) {
-                    targetSlot = emptySlots[0];
+                
+                if (innerEmptySlots.length > 0) {
+                    targetSlot = innerEmptySlots[0];
+                    targetRect = targetSlot.getBoundingClientRect();
+                } else if (edgeEmptySlots.length > 0) {
+                    targetSlot = edgeEmptySlots[0];
                     targetRect = targetSlot.getBoundingClientRect();
                 }
 
@@ -1156,9 +1184,8 @@ export class Renderer {
                 const revSuitMap = { 'H': '♥', 'D': '♦', 'S': '♠', 'C': '♣' };
                 
                 autoCapturedCards.forEach(cc => {
-                    const sym = revSuitMap[cc.suit] || '';
                     for (let el of tableCards) {
-                        if (el.textContent.includes(cc.rank) && el.textContent.includes(sym) && !targetEls.includes(el)) {
+                        if (el.dataset.rank === cc.rank && el.dataset.suit === cc.suit && !targetEls.includes(el)) {
                             targetEls.push(el);
                             capturedRects.push(el.getBoundingClientRect());
                             break;
@@ -1197,11 +1224,16 @@ export class Renderer {
                 await new Promise(r => setTimeout(r, STEP_DELAY));
             } else {
                 // Không ăn được
-                const emptySlots = Array.from(tableEl.querySelectorAll('.empty-slot'));
+                const innerEmptySlots = Array.from(tableEl.querySelectorAll('.empty-slot.inner-slot'));
+                const edgeEmptySlots = Array.from(tableEl.querySelectorAll('.empty-slot.edge-slot'));
                 let targetRect = tableRect;
                 let targetSlot = null;
-                if (emptySlots.length > 0) {
-                    targetSlot = emptySlots[0];
+                
+                if (innerEmptySlots.length > 0) {
+                    targetSlot = innerEmptySlots[0];
+                    targetRect = targetSlot.getBoundingClientRect();
+                } else if (edgeEmptySlots.length > 0) {
+                    targetSlot = edgeEmptySlots[0];
                     targetRect = targetSlot.getBoundingClientRect();
                 }
 
